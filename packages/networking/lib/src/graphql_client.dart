@@ -39,10 +39,14 @@ final class GraphQLClient {
   );
 
   final Dio _dio;
+
+  /// The absolute GraphQL endpoint every operation is posted to.
   final Uri endpoint;
   final Future<void> Function()? _onUnauthorized;
 
   static final Logger _log = Logger('GraphQLClient');
+
+  /// The `extensions.code` that maps an error to [UnauthorizedFailure].
   static const unauthenticatedCode = 'UNAUTHENTICATED';
 
   /// Runs a query. Queries have no side effects, so transient failures are

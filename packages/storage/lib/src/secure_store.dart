@@ -6,8 +6,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// On the web the plugin stores data encrypted with a key that lives in the
 /// same browser profile; treat it as obfuscation, not protection.
 abstract interface class SecureStore {
+  /// The secret stored under [key], or `null` when there is none.
   Future<String?> read(String key);
+
+  /// Stores [value] under [key], replacing any previous secret.
   Future<void> write(String key, String value);
+
+  /// Deletes the secret stored under [key]; does nothing if it is absent.
   Future<void> delete(String key);
 
   /// Removes every secret written by this app.
@@ -16,6 +21,8 @@ abstract interface class SecureStore {
 
 /// [SecureStore] backed by `flutter_secure_storage`.
 final class FlutterSecureStore implements SecureStore {
+  /// Wraps [storage], or a default instance whose iOS Keychain items are
+  /// readable after the first unlock and never leave this device.
   new([FlutterSecureStorage? storage])
     : _storage = storage ?? const FlutterSecureStorage(iOptions: _iosOptions);
 
@@ -40,6 +47,7 @@ final class FlutterSecureStore implements SecureStore {
 
 /// In-memory [SecureStore] for tests. Nothing is persisted.
 final class InMemorySecureStore implements SecureStore {
+  /// Starts with a copy of [initialValues].
   new([Map<String, String> initialValues = const {}])
     : _values = Map.of(initialValues);
 

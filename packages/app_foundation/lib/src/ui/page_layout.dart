@@ -19,17 +19,24 @@ mixin PageLayout<VM> on Widget {
     return text == null ? null : AppBar(title: Text(text));
   }
 
+  /// The page's floating action button; `null` (the default) shows none.
   Widget? buildFloatingActionButton(BuildContext context, VM viewModel) => null;
 
+  /// The page's bottom navigation bar; `null` (the default) shows none.
   Widget? buildBottomNavigationBar(BuildContext context, VM viewModel) => null;
 
+  /// The page's navigation drawer; `null` (the default) shows none.
   Widget? buildDrawer(BuildContext context, VM viewModel) => null;
 
   /// `null` uses the theme's scaffold background.
   Color? backgroundColor(BuildContext context) => null;
 
+  /// Whether the body extends behind the app bar, for example under a
+  /// transparent app bar. See [Scaffold.extendBodyBehindAppBar].
   bool get extendBodyBehindAppBar => false;
 
+  /// Whether the body shrinks when the on-screen keyboard appears. See
+  /// [Scaffold.resizeToAvoidBottomInset].
   bool get resizeToAvoidBottomInset => true;
 
   // Back navigation -----------------------------------------------------------
@@ -82,6 +89,8 @@ mixin PageLayout<VM> on Widget {
 /// Forwards app lifecycle changes to a page's [PageLayout] hooks. Used by
 /// the apps' `BasePage` state classes.
 final class PageLifecycle<VM> {
+  /// Creates a forwarder. The page and view model getters are called on
+  /// every event, so they must return the current widget and view model.
   new({required this._page, required this._viewModel}) : _listener = null;
 
   final PageLayout<VM> Function() _page;
@@ -99,6 +108,8 @@ final class PageLifecycle<VM> {
     );
   }
 
+  /// Stops listening and calls [PageLayout.onDispose]. Call from the
+  /// state's `dispose`.
   void stop() {
     _listener?.dispose();
     _page().onDispose(_viewModel());

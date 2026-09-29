@@ -5,8 +5,13 @@
 /// [sensitiveKeys] for fields specific to your API (national IDs, card
 /// numbers, ...).
 final class Redactor {
+  /// Creates a redactor masking [sensitiveKeys].
+  ///
+  /// To extend rather than replace the defaults, pass
+  /// `{...Redactor.defaultSensitiveKeys, 'nationalid'}`.
   const new({this.sensitiveKeys = defaultSensitiveKeys});
 
+  /// Placeholder that replaces every sensitive value.
   static const String mask = '<redacted>';
 
   /// Normalized (lowercase, no `-`/`_`) keys that are always masked.
@@ -30,8 +35,11 @@ final class Redactor {
     'otp',
   };
 
+  /// Normalized (lowercase, no `-`/`_`) keys whose values are masked.
   final Set<String> sensitiveKeys;
 
+  /// Whether [key] names a sensitive value, after normalizing it the same
+  /// way as [sensitiveKeys].
   bool isSensitive(String key) =>
       sensitiveKeys.contains(key.toLowerCase().replaceAll(RegExp('[-_]'), ''));
 

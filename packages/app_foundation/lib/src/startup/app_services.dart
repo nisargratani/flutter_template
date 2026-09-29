@@ -19,6 +19,9 @@ import 'package:storage/storage.dart';
 /// `RepositoryProvider`s). Feature code receives what it needs through that
 /// mechanism, never by reaching for this object.
 final class AppServices {
+  /// Wraps already-built services. The session store and settings repository
+  /// are created from [secureStore] and [keyValueStore]. Prefer
+  /// [AppServices.fromStores], which also builds the HTTP clients.
   new({
     required this.config,
     required this.keyValueStore,
@@ -66,24 +69,42 @@ final class AppServices {
     );
   }
 
+  /// The validated build configuration.
   final AppConfig config;
+
+  /// Non-secret persistent storage (preferences, small cached values).
   final KeyValueStore keyValueStore;
+
+  /// Encrypted storage for secrets such as the access token.
   final SecureStore secureStore;
+
+  /// The drift database for structured offline data.
   final AppDatabase database;
+
+  /// Where unexpected errors are sent.
   final ErrorReporter errorReporter;
+
+  /// REST client for `API_BASE_URL`, sending the session's access token.
   final ApiClient apiClient;
 
   /// `null` unless `GRAPHQL_URL` is configured.
   final GraphQLClient? graphQLClient;
+
+  /// The user's credentials, stored in [secureStore].
   final SessionStore sessionStore;
+
+  /// User preferences, stored in [keyValueStore].
   final SettingsRepository settingsRepository;
 
+  /// A new cleaner that wipes all of the stores above.
   LocalDataCleaner get localDataCleaner => LocalDataCleaner(
     keyValueStore: keyValueStore,
     secureStore: secureStore,
     database: database,
   );
 
+  /// Closes the database. Call when the app is torn down (for example in
+  /// tests); the services must not be used afterwards.
   Future<void> dispose() => database.close();
 }
 

@@ -6,6 +6,7 @@ import 'package:networking/networking.dart';
 /// REST endpoints of the example API (JSONPlaceholder-compatible):
 /// `GET posts` and `GET posts/{id}`.
 final class RestPostsDataSource implements PostsRemoteDataSource {
+  /// Creates a data source that sends its requests through the given client.
   const new(this._client);
 
   final ApiClient _client;

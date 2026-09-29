@@ -86,6 +86,37 @@ build_runner 2.16 removed `--delete-conflicting-outputs`; run plain
 `dart run build_runner build` (or `watch`). Schema changes also need
 `dart run drift_dev make-migrations` (see `packages/database/README.md`).
 
+## Lint rules
+
+All workspace members share the root
+[`analysis_options.yaml`](../analysis_options.yaml). It is stricter than
+plain very_good_analysis:
+
+| Layer | What it does |
+|---|---|
+| Base | very_good_analysis 11 (211 rules) with `strict-casts`, `strict-inference` and `strict-raw-types`. |
+| Extra rules | The remaining stable rules that do not contradict it, e.g. `close_sinks`, `no_dynamic_casts`, `no_raw_types`, `do_not_use_environment`, `unreachable_from_main`, `prefer_expression_function_bodies`, plus the safety-focused experimental rules `unsafe_variance`, `unnecessary_async`, `avoid_futureor_void`, `annotate_redeclares`, `var_with_no_type_annotation`. |
+| Severity | Correctness, type-safety and hygiene diagnostics (unawaited/discarded futures, `use_build_context_synchronously`, dynamic calls, unused code, deprecated APIs, `print`, relative imports, ...) are **errors**, so they show red in the IDE. |
+| Not ignorable | `cannot-ignore` lists rules that `// ignore:` cannot silence: `avoid_dynamic_calls`, `avoid_print`, `close_sinks`, `collection_methods_unrelated_type`, `discarded_futures`, `invalid_use_of_protected_member`, `invalid_use_of_visible_for_testing_member`, `no_dynamic_casts`, `unawaited_futures`, `unrelated_type_equality_checks`, `use_build_context_synchronously`. Fix the code instead. |
+| API docs | `public_member_api_docs` applies to shared packages (`packages/*`). Apps turn it off in `apps/*/analysis_options.yaml`, since their public members are only used inside the app. |
+| Gate | CI runs `flutter analyze --fatal-infos --fatal-warnings`, so every remaining info fails too. |
+
+Rules for exceptions:
+
+- Every `// ignore:` / `// ignore_for_file:` needs a comment directly above it
+  saying why (`document_ignores`); unused ignores are errors
+  (`unnecessary_ignore`).
+- Don't disable a rule globally to get one file green. If a rule seems
+  wrong for the whole codebase, change `analysis_options.yaml` in its own pull
+  request and say why.
+- `String.fromEnvironment` is only allowed in
+  `app_foundation/lib/src/config/config_reader.dart`; everything else gets an
+  `AppConfig`.
+
+Rules left out on purpose (each contradicts a very_good_analysis choice or
+adds noise with no safety benefit) are listed at the bottom of
+`analysis_options.yaml`, each with its reason.
+
 ## Naming and file organization
 
 - Packages: `snake_case`, a noun describing the responsibility

@@ -23,7 +23,10 @@ pull requests on GitHub.
 
 Do not weaken lint rules, skip packages or delete tests to get a green build.
 If a rule is wrong for a specific line, use a targeted
-`// ignore: rule_name` with a comment explaining why.
+`// ignore: rule_name` with a comment above it explaining why. Some rules
+(unawaited futures, dynamic calls, `print`, `BuildContext` across async gaps,
+...) cannot be ignored at all. Public members of shared packages need `///`
+docs. Details: [docs/development.md](docs/development.md#lint-rules).
 
 ## Commit messages
 
@@ -48,8 +51,8 @@ Security issues: follow [SECURITY.md](SECURITY.md), not public issues.
 
 ## Code style
 
-- `dart format` and the shared analyzer rules (very_good_analysis) are
-  enforced.
+- `dart format` and the shared analyzer rules (very_good_analysis plus the
+  stricter additions in `analysis_options.yaml`) are enforced.
 - Conventions (naming, imports, package boundaries) are in
   [docs/development.md](docs/development.md#naming-and-file-organization) and
   [docs/architecture.md](docs/architecture.md#conventions).

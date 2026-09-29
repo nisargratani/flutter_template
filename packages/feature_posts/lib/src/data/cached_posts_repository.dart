@@ -12,6 +12,8 @@ import 'package:logging/logging.dart';
 /// the local copy is returned (flagged for lists). Other failures (401, 404,
 /// bad payload) are returned as-is.
 final class CachedPostsRepository implements PostsRepository {
+  /// Creates a repository that fetches from the remote data source and
+  /// falls back to the local one.
   const new({required this._remote, required this._local});
 
   final PostsRemoteDataSource _remote;

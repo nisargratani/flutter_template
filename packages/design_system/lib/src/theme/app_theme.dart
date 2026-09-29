@@ -6,9 +6,11 @@ import 'package:material_ui/material_ui.dart';
 /// Customize components here, in one place, rather than styling widgets
 /// individually in feature code.
 abstract final class AppTheme {
+  /// Light theme generated from [seed], which defaults to [AppColors.seed].
   static ThemeData light({Color seed = AppColors.seed}) =>
       _build(ColorScheme.fromSeed(seedColor: seed));
 
+  /// Dark theme generated from [seed], which defaults to [AppColors.seed].
   static ThemeData dark({Color seed = AppColors.seed}) => _build(
     ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
   );

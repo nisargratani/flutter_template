@@ -54,6 +54,13 @@ final class ApiClient {
   final Dio _dio;
   static final Logger _log = Logger('ApiClient');
 
+  /// Sends a `GET` to [path] (relative to the base URL, no leading slash)
+  /// and converts the JSON body with [decode].
+  ///
+  /// [query] becomes the query string; [options] can set per-request
+  /// headers or `RequestExtras`. Transient failures are retried. Returns a
+  /// `ParsingFailure` when [decode] throws a [FormatException], or the
+  /// mapped [AppFailure] for transport and HTTP errors.
   Future<Result<T>> get<T>(
     String path, {
     required JsonDecoder<T> decode,
@@ -69,6 +76,11 @@ final class ApiClient {
     cancelToken: cancelToken,
   );
 
+  /// Sends a `POST` with [body] (maps and lists are sent as JSON) and
+  /// converts the response with [decode]. Parameters and errors are as for
+  /// [get].
+  ///
+  /// Not retried unless [options] sets `RequestExtras.retryable` to `true`.
   Future<Result<T>> post<T>(
     String path, {
     required JsonDecoder<T> decode,
@@ -86,6 +98,11 @@ final class ApiClient {
     cancelToken: cancelToken,
   );
 
+  /// Sends a `PUT` with [body] (maps and lists are sent as JSON) and
+  /// converts the response with [decode]. Parameters and errors are as for
+  /// [get].
+  ///
+  /// Not retried unless [options] sets `RequestExtras.retryable` to `true`.
   Future<Result<T>> put<T>(
     String path, {
     required JsonDecoder<T> decode,
@@ -103,6 +120,11 @@ final class ApiClient {
     cancelToken: cancelToken,
   );
 
+  /// Sends a `PATCH` with [body] (maps and lists are sent as JSON) and
+  /// converts the response with [decode]. Parameters and errors are as for
+  /// [get].
+  ///
+  /// Not retried unless [options] sets `RequestExtras.retryable` to `true`.
   Future<Result<T>> patch<T>(
     String path, {
     required JsonDecoder<T> decode,
@@ -120,6 +142,10 @@ final class ApiClient {
     cancelToken: cancelToken,
   );
 
+  /// Sends a `DELETE`, with an optional [body], and converts the response
+  /// with [decode]. Parameters and errors are as for [get].
+  ///
+  /// Not retried unless [options] sets `RequestExtras.retryable` to `true`.
   Future<Result<T>> delete<T>(
     String path, {
     required JsonDecoder<T> decode,

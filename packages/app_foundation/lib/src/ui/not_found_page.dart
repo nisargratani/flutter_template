@@ -5,8 +5,10 @@ import 'package:material_ui/material_ui.dart';
 /// Shown for unknown paths and rejected deep links. [onGoHome] navigates
 /// back to the start page (the router lives in the app).
 class NotFoundPage extends StatelessWidget {
+  /// Creates the page; [onGoHome] handles the "go home" action.
   const new({required this.onGoHome, super.key});
 
+  /// Called when the user taps the "go home" button.
   final VoidCallback onGoHome;
 
   @override

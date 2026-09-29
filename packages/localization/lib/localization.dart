@@ -18,6 +18,11 @@ import 'package:localization/src/generated/app_localizations.dart';
 
 export 'src/generated/app_localizations.dart' show AppLocalizations;
 
+/// Access to [AppLocalizations] from any [BuildContext].
+///
+/// ```dart
+/// Text(context.l10n.appTitle)
+/// ```
 extension AppLocalizationsContext on BuildContext {
   /// Shorthand for `AppLocalizations.of(context)`.
   AppLocalizations get l10n => AppLocalizations.of(this);

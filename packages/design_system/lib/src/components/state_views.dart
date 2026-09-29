@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 /// A centered progress indicator for loading states.
 class AppLoadingView extends StatelessWidget {
+  /// Creates a loading view, optionally announcing [semanticLabel].
   const new({super.key, this.semanticLabel});
 
   /// Localized label announced by screen readers.
@@ -17,6 +18,8 @@ class AppLoadingView extends StatelessWidget {
 /// A centered icon, title, message and optional action. Used for empty and
 /// error states so they look the same everywhere.
 class AppMessageView extends StatelessWidget {
+  /// Creates a message view. Prefer [AppMessageView.empty] or
+  /// [AppMessageView.error] for the common presets.
   const new({
     required this.icon,
     required this.title,
@@ -47,11 +50,26 @@ class AppMessageView extends StatelessWidget {
     IconData icon,
   }) = _ErrorMessageView;
 
+  /// Large icon shown above [title], tinted with the error color when
+  /// [isError] is `true`.
   final IconData icon;
+
+  /// Short headline describing the state; announced as a heading.
   final String title;
+
+  /// Optional supporting text below [title]; `null` hides it.
   final String? message;
+
+  /// Text of the action button. The button is shown only when both this and
+  /// [onAction] are non-null.
   final String? actionLabel;
+
+  /// Called when the action button is tapped, e.g. to retry a failed load.
+  /// `null` hides the button.
   final VoidCallback? onAction;
+
+  /// Whether the view reports an error, which colors [icon] with the theme's
+  /// error color. Defaults to `false`.
   final bool isError;
 
   @override
@@ -128,8 +146,10 @@ class _ErrorMessageView extends AppMessageView {
 /// A section title inside scrolling content; marked as a heading for screen
 /// readers.
 class AppSectionHeader extends StatelessWidget {
+  /// Creates a section header showing [title].
   const new(this.title, {super.key});
 
+  /// Heading text, styled with the theme's primary color.
   final String title;
 
   @override

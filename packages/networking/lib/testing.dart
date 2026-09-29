@@ -14,6 +14,8 @@ typedef FakeHandler = Future<FakeResponse> Function(
 
 /// A canned HTTP response.
 final class FakeResponse {
+  /// A response with [statusCode], an optional raw [body] and [headers]
+  /// (none by default).
   const new(this.statusCode, [this.body, this.headers = const {}]);
 
   /// A JSON response with `content-type: application/json`.
@@ -22,8 +24,13 @@ final class FakeResponse {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       });
 
+  /// The HTTP status code; Dio treats codes outside 2xx as a `badResponse`.
   final int statusCode;
+
+  /// The raw response body, or `null` for an empty body.
   final String? body;
+
+  /// Response headers, keyed by header name.
   final Map<String, List<String>> headers;
 }
 
@@ -32,6 +39,7 @@ final class FakeResponse {
 /// Throw a [DioException] from the handler to simulate transport errors, e.g.
 /// `throw DioException.connectionError(requestOptions: r, reason: 'offline')`.
 final class FakeHttpAdapter implements HttpClientAdapter {
+  /// Answers every request with the result of [handler].
   new(this.handler);
 
   /// Always answers with the same [response].
@@ -47,6 +55,8 @@ final class FakeHttpAdapter implements HttpClientAdapter {
     ),
   );
 
+  /// Produces the response for each request; receives the request and its
+  /// zero-based index among all requests this adapter has seen.
   final FakeHandler handler;
 
   /// Every request received, in order.

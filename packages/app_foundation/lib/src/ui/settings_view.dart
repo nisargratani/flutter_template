@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 /// clearing local data. Apps pass the current values and callbacks from
 /// their state management.
 class SettingsView extends StatelessWidget {
+  /// Creates the settings body from the current values and callbacks.
   const new({
     required this.config,
     required this.themeMode,
@@ -17,12 +18,20 @@ class SettingsView extends StatelessWidget {
     super.key,
   });
 
+  /// Build configuration shown in the about section (environment, API and
+  /// GraphQL hosts).
   final AppConfig config;
+
+  /// The selected theme mode.
   final ThemeMode themeMode;
 
   /// `null` follows the device language.
   final Locale? locale;
+
+  /// Called when the user picks a different theme mode.
   final ValueChanged<ThemeMode> onThemeModeChanged;
+
+  /// Called when the user picks a language; `null` means follow the device.
   final ValueChanged<Locale?> onLocaleChanged;
 
   /// Clears local data. Called only after the user confirms.

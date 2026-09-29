@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 /// Neutral showcase of the design system. Replace it with your first feature.
 class ShowcasePage extends StatelessWidget {
+  /// Creates the showcase page.
   const new({super.key});
 
   @override
@@ -92,8 +93,10 @@ class _ButtonsDemoState extends State<_ButtonsDemo> {
 
 /// Form validation with pure validators from `core` and localized messages.
 class ExampleForm extends StatefulWidget {
+  /// Creates the example form.
   const new({super.key});
 
+  /// Shortest password the form accepts.
   static const minPasswordLength = 8;
 
   @override

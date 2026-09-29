@@ -1,3 +1,6 @@
+// This is the single place allowed to read compile-time environment values;
+// everything else receives a validated AppConfig instead.
+// ignore_for_file: do_not_use_environment
 import 'package:core/core.dart';
 import 'package:flutter/services.dart';
 

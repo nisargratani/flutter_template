@@ -6,11 +6,15 @@ import 'package:networking/networking.dart';
 /// GraphQL version of the example API (GraphQLZero-compatible schema, which
 /// mirrors JSONPlaceholder). Replace the documents with your schema's.
 final class GraphQLPostsDataSource implements PostsRemoteDataSource {
+  /// Creates a data source that sends its queries through the given client.
   const new(this._client, {this.pageSize = 100});
 
   final GraphQLClient _client;
+
+  /// Maximum number of posts [fetchPosts] requests (first page only).
   final int pageSize;
 
+  /// Query for the first page of posts, `pageSize` items long.
   static const postsQuery = r'''
 query Posts($options: PageQueryOptions) {
   posts(options: $options) {
@@ -18,6 +22,7 @@ query Posts($options: PageQueryOptions) {
   }
 }''';
 
+  /// Query for a single post by id.
   static const postQuery = r'''
 query Post($id: ID!) {
   post(id: $id) { id title body user { id } }

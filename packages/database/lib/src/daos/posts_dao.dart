@@ -7,6 +7,8 @@ part 'posts_dao.g.dart';
 /// Queries for the cached posts table.
 @DriftAccessor(tables: [CachedPosts])
 class PostsDao extends DatabaseAccessor<AppDatabase> with _$PostsDaoMixin {
+  /// Creates the DAO for [attachedDatabase]; normally reached through the
+  /// database's `postsDao` getter instead.
   new(super.attachedDatabase);
 
   /// Replaces the whole cache atomically with [rows].
@@ -24,6 +26,7 @@ class PostsDao extends DatabaseAccessor<AppDatabase> with _$PostsDaoMixin {
   Stream<List<CachedPostRow>> watchAll() =>
       (select(cachedPosts)..orderBy([(t) => OrderingTerm.asc(t.id)])).watch();
 
+  /// The cached post with [id], or `null` when it is not cached.
   Future<CachedPostRow?> getById(int id) =>
       (select(cachedPosts)..where((t) => t.id.equals(id))).getSingleOrNull();
 }

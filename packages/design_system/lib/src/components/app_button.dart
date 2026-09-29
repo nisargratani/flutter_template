@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+/// Visual emphasis of an [AppButton], mapped to a Material button type.
 enum AppButtonVariant {
   /// High emphasis: the main action of a screen ([FilledButton]).
   primary,
@@ -17,6 +18,9 @@ enum AppButtonVariant {
 /// indicator and announces [loadingLabel] to screen readers, which prevents
 /// duplicate submissions.
 class AppButton extends StatelessWidget {
+  /// Creates a button showing [label] that calls [onPressed] when tapped.
+  ///
+  /// Defaults to a [AppButtonVariant.primary] button sized to its content.
   const new({
     required this.label,
     required this.onPressed,
@@ -28,12 +32,23 @@ class AppButton extends StatelessWidget {
     this.expand = false,
   });
 
+  /// Visible text of the button; also its accessibility label unless
+  /// [isLoading] is `true`.
   final String label;
 
   /// `null` disables the button.
   final VoidCallback? onPressed;
+
+  /// Emphasis of the button. Defaults to [AppButtonVariant.primary].
   final AppButtonVariant variant;
+
+  /// Optional leading icon. Hidden while [isLoading]; `null` shows the label
+  /// only.
   final IconData? icon;
+
+  /// Whether an operation triggered by the button is in progress. When
+  /// `true`, the button is disabled and shows a progress indicator instead
+  /// of [label]. Defaults to `false`.
   final bool isLoading;
 
   /// Screen reader label while [isLoading]. Pass a localized string.

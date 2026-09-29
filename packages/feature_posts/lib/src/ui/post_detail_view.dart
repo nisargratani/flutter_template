@@ -4,8 +4,10 @@ import 'package:material_ui/material_ui.dart';
 
 /// Stateless body of the post detail screen.
 class PostDetailView extends StatelessWidget {
+  /// Creates the detail body for [post].
   const new({required this.post, super.key});
 
+  /// The post whose title and body are shown.
   final Post post;
 
   @override

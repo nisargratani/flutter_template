@@ -6,21 +6,50 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// asynchronously. **Do not store secrets or tokens here**: on Android and iOS
 /// the backing file is not encrypted. Use `SecureStore` for those.
 abstract interface class KeyValueStore {
+  /// The string stored under [key], or `null` when the key is absent.
+  ///
+  /// Like every getter here, throws a [TypeError] if the value was stored
+  /// with a different type.
   String? getString(String key);
+
+  /// The bool stored under [key], or `null` when the key is absent.
   bool? getBool(String key);
+
+  /// The int stored under [key], or `null` when the key is absent.
   int? getInt(String key);
+
+  /// The double stored under [key], or `null` when the key is absent.
   double? getDouble(String key);
+
+  /// A copy of the string list stored under [key], or `null` when the key is
+  /// absent.
   List<String>? getStringList(String key);
 
+  /// Stores [value] under [key], replacing any previous value.
+  ///
+  /// The in-memory value is visible to reads immediately; the returned
+  /// future completes once it has been persisted.
   Future<void> setString(String key, String value);
+
+  /// Stores [value] under [key], replacing any previous value.
   Future<void> setBool(String key, {required bool value});
+
+  /// Stores [value] under [key], replacing any previous value.
   Future<void> setInt(String key, int value);
+
+  /// Stores [value] under [key], replacing any previous value.
   Future<void> setDouble(String key, double value);
+
+  /// Stores a copy of [value] under [key], replacing any previous value.
   Future<void> setStringList(String key, List<String> value);
 
+  /// Whether a value of any type is stored under [key].
   bool containsKey(String key);
+
+  /// A snapshot of every key currently stored.
   Set<String> get keys;
 
+  /// Deletes the value stored under [key]; does nothing if it is absent.
   Future<void> remove(String key);
 
   /// Removes every key held by this store.
@@ -85,6 +114,8 @@ final class SharedPreferencesKeyValueStore implements KeyValueStore {
 
 /// In-memory [KeyValueStore] for tests and previews. Nothing is persisted.
 final class InMemoryKeyValueStore implements KeyValueStore {
+  /// Starts with a copy of [initialValues]; values must be `String`, `bool`,
+  /// `int`, `double` or `List<String>`.
   new([Map<String, Object> initialValues = const {}])
     : _values = Map.of(initialValues);
 

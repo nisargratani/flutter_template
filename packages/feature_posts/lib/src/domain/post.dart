@@ -3,6 +3,7 @@ import 'package:meta/meta.dart';
 /// Example domain entity. Replace with your own models.
 @immutable
 final class Post {
+  /// Creates a post.
   const new({
     required this.id,
     required this.userId,
@@ -22,11 +23,19 @@ final class Post {
     _ => throw FormatException('Invalid post payload', json),
   };
 
+  /// Unique, positive identifier.
   final int id;
+
+  /// Identifier of the post's author.
   final int userId;
+
+  /// Headline shown in lists and as the detail heading.
   final String title;
+
+  /// Full text of the post.
   final String body;
 
+  /// Encodes the post in the shape [Post.fromJson] accepts.
   Map<String, Object?> toJson() => {
     'id': id,
     'userId': userId,
@@ -49,8 +58,10 @@ final class Post {
 /// A list of posts and where it came from.
 @immutable
 final class PostsFeed {
+  /// Creates a feed of [posts]; [isFromCache] marks offline data.
   const new(this.posts, {this.isFromCache = false});
 
+  /// The posts, in the order the source returned them.
   final List<Post> posts;
 
   /// `true` when the network was unavailable and saved data is shown.

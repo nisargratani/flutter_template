@@ -3,6 +3,7 @@ import 'package:design_system/design_system.dart';
 import 'package:localization/localization.dart';
 import 'package:material_ui/material_ui.dart';
 
+/// Maps failures and validation errors to localized, user-facing text.
 extension FailureMessages on AppLocalizations {
   /// A user-facing, localized explanation for [error]. Never shows the
   /// developer message, which may contain technical details.
@@ -27,9 +28,14 @@ extension FailureMessages on AppLocalizations {
 
 /// Standard error state for a failed load, with a retry button.
 class FailureView extends StatelessWidget {
+  /// Creates an error state for [error] that calls [onRetry] on retry.
   const new({required this.error, required this.onRetry, super.key});
 
+  /// The failure to explain, usually an `AppFailure`; any other object is
+  /// shown as an unknown error.
   final Object error;
+
+  /// Called when the user taps the retry button.
   final VoidCallback onRetry;
 
   @override

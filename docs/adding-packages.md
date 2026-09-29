@@ -68,8 +68,10 @@ Riverpod/go_router stay in apps, SDK constraints match the root.
 2. In `apps/admin/pubspec.yaml`: add `resolution: workspace`, set
    `environment.sdk: ^3.13.0` and `environment.flutter: ">=3.47.0"`, remove
    `flutter_lints`, and add the workspace packages you need (`core: any`,
-   `design_system: any`, ...). Delete `analysis_options.yaml` and
-   `pubspec.lock`.
+   `design_system: any`, ...). Delete `pubspec.lock`, and replace the
+   generated `analysis_options.yaml` with a copy of
+   `apps/app/analysis_options.yaml` (the shared rules, minus
+   `public_member_api_docs`).
 
 3. Start-up and shared screens come from `app_foundation`: call
    `initializeAppServices()` in the new app's `bootstrap.dart` and expose the

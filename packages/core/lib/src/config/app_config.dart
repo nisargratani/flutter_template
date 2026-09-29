@@ -4,10 +4,23 @@ import 'package:meta/meta.dart';
 
 /// Keys read from `--dart-define` / `--dart-define-from-file`.
 abstract final class ConfigKeys {
+  /// Target environment: `dev`, `staging` or `prod`. Required unless a
+  /// build flavor supplies it.
   static const environment = 'APP_ENV';
+
+  /// Absolute base URL for REST calls. Required; must be https outside dev.
   static const apiBaseUrl = 'API_BASE_URL';
+
+  /// Minimum [LogLevel] name to emit. Defaults to `info`; `debug` is
+  /// rejected in prod.
   static const logLevel = 'LOG_LEVEL';
+
+  /// `true` or `false`: whether HTTP traffic is logged. Defaults to `false`
+  /// and must be `false` in prod.
   static const networkLogs = 'NETWORK_LOGS';
+
+  /// Optional absolute GraphQL endpoint. Omit it when the app does not use
+  /// GraphQL.
   static const graphQLUrl = 'GRAPHQL_URL';
 }
 
@@ -15,8 +28,11 @@ abstract final class ConfigKeys {
 ///
 /// [problems] lists every issue found, so a developer can fix them in one go.
 final class ConfigException implements Exception {
+  /// Creates an exception reporting every entry in [problems].
   const new(this.problems);
 
+  /// Human-readable descriptions of each invalid or missing value, in the
+  /// order they were found. Never empty when thrown by [AppConfig.fromMap].
   final List<String> problems;
 
   @override
@@ -31,6 +47,10 @@ final class ConfigException implements Exception {
 /// server you control.
 @immutable
 final class AppConfig {
+  /// Creates a configuration from already-validated values.
+  ///
+  /// No checks are performed; prefer [AppConfig.fromMap] for raw input.
+  /// Useful in tests.
   const new({
     required this.environment,
     required this.apiBaseUrl,
@@ -160,6 +180,8 @@ final class AppConfig {
     );
   }
 
+  /// The environment this build targets, resolved from the flavor or
+  /// `APP_ENV`.
   final AppEnvironment environment;
 
   /// Base URL for REST calls, always absolute.
@@ -167,6 +189,8 @@ final class AppConfig {
 
   /// GraphQL endpoint, or `null` when the app does not use GraphQL.
   final Uri? graphQLUrl;
+
+  /// Minimum severity that is logged. Never [LogLevel.debug] in prod.
   final LogLevel logLevel;
 
   /// Whether HTTP traffic is logged (redacted). Always `false` in prod.

@@ -13,6 +13,10 @@ import 'package:networking/src/request_options_x.dart';
 /// Retried conditions: connection errors, timeouts, and HTTP 408, 429, 502,
 /// 503 and 504. Cancelled requests are never retried.
 final class RetryInterceptor extends Interceptor {
+  /// Creates an interceptor that re-sends failed requests through `dio`.
+  ///
+  /// Attempt `n` (zero-based) waits `baseDelay * 2^n` before retrying.
+  /// `sleep` replaces [Future.delayed] so tests can skip the waits.
   new({
     required this._dio,
     this.maxRetries = 2,
@@ -21,11 +25,18 @@ final class RetryInterceptor extends Interceptor {
   }) : _sleep = sleep ?? Future<void>.delayed;
 
   final Dio _dio;
+
+  /// Maximum number of retries after the first attempt; defaults to 2.
   final int maxRetries;
+
+  /// Delay before the first retry, doubled for each further retry.
   final Duration baseDelay;
   final Future<void> Function(Duration delay) _sleep;
 
+  /// HTTP methods retried without opting in via `RequestExtras.retryable`.
   static const Set<String> idempotentMethods = {'GET', 'HEAD', 'OPTIONS'};
+
+  /// HTTP status codes treated as transient and therefore retried.
   static const Set<int> retryableStatusCodes = {408, 429, 502, 503, 504};
 
   @override

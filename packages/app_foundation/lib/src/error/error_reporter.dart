@@ -7,6 +7,11 @@ import 'package:logging/logging.dart';
 /// this interface with your vendor's SDK and pass it to `bootstrap`; nothing
 /// else in the app needs to change.
 abstract interface class ErrorReporter {
+  /// Records [error] with its [stackTrace], if known.
+  ///
+  /// [reason] adds context about where the error was caught. [fatal] is
+  /// `true` for uncaught errors that reached the global handlers, and
+  /// `false` for errors the app caught and recovered from.
   void recordError(
     Object error,
     StackTrace? stackTrace, {
@@ -14,6 +19,8 @@ abstract interface class ErrorReporter {
     bool fatal = false,
   });
 
+  /// Records an error reported by the Flutter framework (build, layout,
+  /// paint), as passed to `FlutterError.onError`.
   void recordFlutterError(FlutterErrorDetails details);
 }
 

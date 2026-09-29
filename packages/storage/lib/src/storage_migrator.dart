@@ -5,14 +5,22 @@ import 'package:storage/src/secure_store.dart';
 
 /// One step that upgrades persisted data from `version - 1` to [version].
 final class StorageMigration {
+  /// Creates the step that brings data to [version] by running [migrate].
   const new({
     required this.version,
     required this.description,
     required this.migrate,
   });
 
+  /// The schema version this step produces; unique and `>= 1`.
   final int version;
+
+  /// A short summary of the change, written to the log when the step runs.
   final String description;
+
+  /// Performs the upgrade. It must be idempotent, because it runs again if
+  /// the app is killed before the new version is saved. Throw an [Exception]
+  /// to abort; `StorageMigrator.run` then returns a [StorageFailure].
   final Future<void> Function(KeyValueStore store, SecureStore secureStore)
   migrate;
 }
@@ -24,6 +32,11 @@ final class StorageMigration {
 /// interrupted upgrade resumes where it stopped. Migrations must therefore be
 /// idempotent.
 final class StorageMigrator {
+  /// Creates a migrator for [store] and [secureStore].
+  ///
+  /// [migrations] may be given in any order; they are sorted by version.
+  /// Throws an [ArgumentError] if two share a version or any version is
+  /// below 1.
   new({
     required this.store,
     required this.secureStore,
@@ -42,15 +55,29 @@ final class StorageMigrator {
     }
   }
 
+  /// The [KeyValueStore] key holding the last applied schema version.
   static const versionKey = 'storage.schema_version';
+
+  /// The [KeyValueStore] key set on first launch. When it is missing, [run]
+  /// wipes [secureStore], because iOS keeps Keychain items after an
+  /// uninstall while preferences are deleted.
   static const installMarkerKey = 'storage.install_marker';
   static final Logger _log = Logger('StorageMigrator');
 
+  /// The store that holds the schema version and non-sensitive data.
   final KeyValueStore store;
+
+  /// The secret store passed to each migration.
   final SecureStore secureStore;
+
+  /// All migrations, sorted by ascending version; unmodifiable.
   final List<StorageMigration> migrations;
 
+  /// The schema version of the persisted data; `0` before any migration.
   int get currentVersion => store.getInt(versionKey) ?? 0;
+
+  /// The version [run] upgrades to: the highest migration version, or `0`
+  /// when there are no migrations.
   int get targetVersion => migrations.isEmpty ? 0 : migrations.last.version;
 
   /// Runs pending migrations. Returns a [StorageFailure] if one fails; data

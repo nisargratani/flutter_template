@@ -9,8 +9,10 @@ import 'package:material_ui/material_ui.dart';
 /// This is a developer-facing screen (end users never see a correctly
 /// configured build fail), so it is intentionally not localized.
 class ConfigErrorApp extends StatelessWidget {
+  /// Creates the error screen for [exception].
   const new(this.exception, {super.key});
 
+  /// The validation failure; each of its problems is listed on screen.
   final ConfigException exception;
 
   @override

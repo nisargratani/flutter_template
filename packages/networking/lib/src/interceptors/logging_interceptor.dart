@@ -9,6 +9,9 @@ import 'package:networking/src/request_options_x.dart';
 /// Enable it only when `NETWORK_LOGS=true`; configuration validation rejects
 /// that in prod. Bodies are logged only when [logBodies] is `true`.
 final class LoggingInterceptor extends Interceptor {
+  /// Logs to [logger] (default `Logger('Http')`): requests and responses at
+  /// `FINE`, errors at `WARNING`. `clock` is used to time requests and can be
+  /// replaced in tests.
   new({
     Logger? logger,
     this.redactor = const Redactor(),
@@ -18,7 +21,12 @@ final class LoggingInterceptor extends Interceptor {
        _clock = clock ?? DateTime.now;
 
   final Logger _log;
+
+  /// Masks sensitive headers, query parameters and JSON fields before they
+  /// are logged.
   final Redactor redactor;
+
+  /// Whether request and response bodies are logged (after redaction).
   final bool logBodies;
   final DateTime Function() _clock;
 

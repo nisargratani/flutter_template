@@ -144,9 +144,16 @@ class $CachedPostsTable extends CachedPosts
 }
 
 class CachedPostRow extends DataClass implements Insertable<CachedPostRow> {
+  /// The post id assigned by the API; the primary key.
   final int id;
+
+  /// The id of the user who wrote the post.
   final int userId;
+
+  /// The post title as returned by the API.
   final String title;
+
+  /// The full post text as returned by the API.
   final String body;
 
   /// When the row was last refreshed from the network.

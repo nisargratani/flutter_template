@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased: strict lint rules
+
+### Changed
+- `analysis_options.yaml`: on top of very_good_analysis, enables every
+  remaining compatible stable rule (`close_sinks`, `no_dynamic_casts`,
+  `no_raw_types`, `do_not_use_environment`, `unreachable_from_main`, ...) and
+  the safety-focused experimental rules (`unsafe_variance`,
+  `unnecessary_async`, `avoid_futureor_void`, `annotate_redeclares`,
+  `var_with_no_type_annotation`).
+- Correctness, type-safety and hygiene diagnostics are raised to errors;
+  eleven of them (unawaited/discarded futures, dynamic calls, `print`,
+  `BuildContext` across async gaps, ...) can no longer be silenced with
+  `// ignore:`.
+- `public_member_api_docs` is required in shared packages; every public
+  member of `packages/*` is now documented. Apps opt out in their own
+  `analysis_options.yaml`.
+- Documented in `docs/development.md#lint-rules`.
+
 ## Unreleased: MVVM base pages
 
 ### Added

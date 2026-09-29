@@ -74,8 +74,10 @@ committing to a backend or third-party services.
   locale, runtime language switching with device fallback.
 - **Reliability**: global error handlers, a pluggable `ErrorReporter`, clear
   loading/empty/error/success states, an offline fallback.
-- **Quality**: 197 unit/widget tests, 4 integration tests, strict lints
-  (very_good_analysis), a single `melos run validate` gate shared with CI.
+- **Quality**: 197 unit/widget tests, 4 integration tests, enterprise-grade
+  lints (very_good_analysis plus extra rules, safety diagnostics as errors,
+  un-ignorable correctness rules, documented public APIs), a single
+  `melos run validate` gate shared with CI.
 - **Tooling**: rename script, VS Code and IntelliJ launch configurations,
   Dependabot, manual release workflow.
 

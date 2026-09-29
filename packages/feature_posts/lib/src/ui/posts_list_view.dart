@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 /// It knows nothing about the state-management library: the app passes the
 /// data and callbacks from its Riverpod provider or Bloc.
 class PostsListView extends StatelessWidget {
+  /// Creates the list for [feed] with the given callbacks.
   const new({
     required this.feed,
     required this.onRefresh,
@@ -18,8 +19,13 @@ class PostsListView extends StatelessWidget {
     this.refreshError,
   });
 
+  /// The posts to show; an empty feed shows the empty state.
   final PostsFeed feed;
+
+  /// Called on pull-to-refresh; the indicator spins until it completes.
   final Future<void> Function() onRefresh;
+
+  /// Called with the post the user tapped.
   final ValueChanged<Post> onOpenPost;
 
   /// Set when a refresh failed while older data is still shown.
