@@ -53,6 +53,7 @@
   "aboutSection": "Acerca de esta compilación",
   "environmentLabel": "Entorno",
   "apiLabel": "API",
+  "graphQLLabel": "GraphQL",
   "dataSection": "Datos",
   "clearDataAction": "Borrar datos locales",
   "clearDataMessage": "Elimina la sesión guardada, el contenido en caché y las preferencias de este dispositivo.",

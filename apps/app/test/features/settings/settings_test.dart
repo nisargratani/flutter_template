@@ -1,6 +1,5 @@
-import 'package:app/app/session/session_store.dart';
-import 'package:app/features/posts/data/posts_cache.dart';
-import 'package:app/features/settings/data/settings_repository.dart';
+import 'package:app_foundation/app_foundation.dart';
+import 'package:database/database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:storage/storage.dart';
@@ -8,27 +7,6 @@ import 'package:storage/storage.dart';
 import '../../helpers/test_app.dart';
 
 void main() {
-  group('SettingsRepository', () {
-    test('persists theme mode and locale', () async {
-      final store = InMemoryKeyValueStore();
-      final repository = SettingsRepository(store);
-
-      expect(repository.themeMode, ThemeMode.system);
-      expect(repository.locale, isNull);
-
-      await repository.setThemeMode(ThemeMode.dark);
-      await repository.setLocale(const Locale('es'));
-
-      final reloaded = SettingsRepository(store);
-      expect(reloaded.themeMode, ThemeMode.dark);
-      expect(reloaded.locale, const Locale('es'));
-
-      await reloaded.setThemeMode(ThemeMode.system);
-      await reloaded.setLocale(null);
-      expect(store.keys, isEmpty);
-    });
-  });
-
   group('SettingsPage', () {
     late TestAppHarness harness;
 
@@ -92,7 +70,15 @@ void main() {
         SettingsRepository.themeModeKey,
         'dark',
       );
-      await harness.keyValueStore.setString(PostsCache.key, '[]');
+      await harness.database.postsDao.replaceAll([
+        CachedPostsCompanion.insert(
+          id: const Value(1),
+          userId: 1,
+          title: 't',
+          body: 'b',
+          cachedAt: DateTime.utc(2026),
+        ),
+      ]);
       await harness.keyValueStore.setInt(StorageMigrator.versionKey, 1);
       await harness.secureStore.write(SessionStore.accessTokenKey, 'token');
       await harness.pump(tester, initialLocation: '/settings');
@@ -105,6 +91,7 @@ void main() {
       expect(appThemeMode(tester), ThemeMode.system);
       expect(harness.keyValueStore.keys, {StorageMigrator.versionKey});
       expect(await harness.secureStore.read(SessionStore.accessTokenKey), null);
+      expect(await harness.database.postsDao.getAll(), isEmpty);
     });
 
     testWidgets('keeps data when the dialog is cancelled', (tester) async {

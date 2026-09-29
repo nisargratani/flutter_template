@@ -2,9 +2,8 @@ import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:logging/logging.dart';
 import 'package:networking/src/error_mapper.dart';
+import 'package:networking/src/http_settings.dart';
 import 'package:networking/src/interceptors/auth_interceptor.dart';
-import 'package:networking/src/interceptors/logging_interceptor.dart';
-import 'package:networking/src/interceptors/retry_interceptor.dart';
 
 /// Converts decoded JSON into a typed value. Throw a [FormatException] when
 /// the payload does not have the expected shape.
@@ -19,19 +18,29 @@ final class ApiClient {
   new(Dio dio) : _dio = dio;
 
   /// Builds a client with the workspace defaults: JSON, timeouts and the
-  /// auth -> logging -> retry interceptor chain.
+  /// auth -> logging -> retry interceptor chain (see [HttpSettings]).
   factory create({
     required Uri baseUrl,
     TokenReader? readToken,
     Future<void> Function()? onUnauthorized,
     bool enableLogging = false,
     bool logBodies = false,
-    Duration connectTimeout = const Duration(seconds: 15),
-    Duration receiveTimeout = const Duration(seconds: 30),
-    Duration sendTimeout = const Duration(seconds: 30),
     int maxRetries = 2,
     HttpClientAdapter? httpClientAdapter,
-  }) {
+  }) => ApiClient.withSettings(
+    baseUrl: baseUrl,
+    settings: HttpSettings(
+      readToken: readToken,
+      onUnauthorized: onUnauthorized,
+      enableLogging: enableLogging,
+      logBodies: logBodies,
+      maxRetries: maxRetries,
+      httpClientAdapter: httpClientAdapter,
+    ),
+  );
+
+  /// Builds a client from shared [HttpSettings].
+  factory withSettings({required Uri baseUrl, required HttpSettings settings}) {
     // Dio concatenates baseUrl and relative paths verbatim, so
     // "https://api.dev" + "posts" would become "https://api.devposts".
     // Normalize to a trailing slash; request paths must then be relative
@@ -39,23 +48,7 @@ final class ApiClient {
     final base = baseUrl.path.endsWith('/')
         ? baseUrl
         : baseUrl.replace(path: '${baseUrl.path}/');
-    final dio = Dio(
-      BaseOptions(
-        baseUrl: base.toString(),
-        connectTimeout: connectTimeout,
-        receiveTimeout: receiveTimeout,
-        sendTimeout: sendTimeout,
-        headers: const {'Accept': 'application/json'},
-      ),
-    );
-    if (httpClientAdapter != null) dio.httpClientAdapter = httpClientAdapter;
-    dio.interceptors.addAll([
-      if (readToken != null)
-        AuthInterceptor(readToken: readToken, onUnauthorized: onUnauthorized),
-      if (enableLogging) LoggingInterceptor(logBodies: logBodies),
-      if (maxRetries > 0) RetryInterceptor(dio: dio, maxRetries: maxRetries),
-    ]);
-    return ApiClient(dio);
+    return ApiClient(settings.createDio(baseUrl: base.toString()));
   }
 
   final Dio _dio;

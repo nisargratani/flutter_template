@@ -224,6 +224,10 @@
   "@apiLabel": {
     "description": "Label for the API base URL."
   },
+  "graphQLLabel": "GraphQL",
+  "@graphQLLabel": {
+    "description": "Label for the GraphQL endpoint host (shown only when configured)."
+  },
   "dataSection": "Data",
   "@dataSection": {
     "description": "Section heading for local data actions."

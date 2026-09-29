@@ -1,10 +1,8 @@
 import 'package:app/app/router/app_shell.dart';
-import 'package:app/app/router/not_found_page.dart';
-import 'package:app/app/router/routes.dart';
-import 'package:app/features/home/presentation/home_page.dart';
 import 'package:app/features/posts/presentation/post_detail_page.dart';
 import 'package:app/features/posts/presentation/posts_page.dart';
 import 'package:app/features/settings/presentation/settings_page.dart';
+import 'package:app_foundation/app_foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,11 +17,13 @@ final routerProvider = Provider<GoRouter>((ref) {
 GoRouter createRouter({String initialLocation = AppRoutes.home}) => GoRouter(
   initialLocation: initialLocation,
   redirect: (context, state) => state.uri.path == '/' ? AppRoutes.home : null,
-  errorBuilder: (context, state) => const NotFoundPage(),
+  errorBuilder: (context, state) =>
+      NotFoundPage(onGoHome: () => context.go(AppRoutes.home)),
   routes: [
     GoRoute(
       path: AppRoutes.notFound,
-      builder: (context, state) => const NotFoundPage(),
+      builder: (context, state) =>
+          NotFoundPage(onGoHome: () => context.go(AppRoutes.home)),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
@@ -32,7 +32,7 @@ GoRouter createRouter({String initialLocation = AppRoutes.home}) => GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.home,
-              builder: (context, state) => const HomePage(),
+              builder: (context, state) => const ShowcasePage(),
             ),
           ],
         ),

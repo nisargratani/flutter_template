@@ -2,14 +2,18 @@
 
 A starter for Flutter applications organized as a
 [Melos](https://melos.invertase.dev/) monorepo on
-[pub workspaces](https://dart.dev/tools/pub/workspaces). Clone it, rename the
-app, point it at your API and start building features on a tested
-foundation: configuration per environment, networking, secure storage,
-localization, a Material 3 design system, routing, CI and documentation.
+[pub workspaces](https://dart.dev/tools/pub/workspaces). Clone it, pick
+Riverpod or Bloc, rename the app, point it at your API and start building
+features on a tested foundation: configuration per environment, REST and
+GraphQL networking, a SQLite database, secure storage, localization, a
+Material 3 design system, routing, CI and documentation.
 
-It includes an example app with three neutral screens (a component showcase,
-a posts list loaded from a placeholder API with offline caching, and
-settings). Replace them with your product.
+It ships the same example app twice, once with **Riverpod** (`apps/app`) and
+once with **Bloc** (`apps/app_bloc`), both built on the same shared packages.
+Each has three neutral screens (a component showcase, a posts list loaded
+from a placeholder API with an offline SQLite cache, and settings). Keep the
+app that matches your team's choice and replace the screens with your
+product.
 
 **Who it is for:** teams starting a new Flutter app (or several) who want
 sensible defaults, clear package boundaries and CI from day one without
@@ -21,6 +25,7 @@ committing to a backend or third-party services.
 - [Requirements](#requirements)
 - [Repository structure](#repository-structure)
 - [Architecture](#architecture)
+- [Choosing Riverpod or Bloc](#choosing-riverpod-or-bloc)
 - [Getting started](#getting-started)
 - [Environments and flavors](#environments-and-flavors)
 - [App identifiers and display names](#app-identifiers-and-display-names)
@@ -45,16 +50,23 @@ committing to a backend or third-party services.
   configuration; production builds refuse to start with placeholder settings.
 - **Architecture**: small packages with one responsibility, dependencies
   pointing inward, checked automatically (no cycles, no framework leaks).
-- **State and DI**: Riverpod 3 providers and notifiers, explicit overrides,
-  no service locator.
+  Shared packages never depend on a state-management library.
+- **State and DI, your choice**: Riverpod 3 (providers, notifiers, explicit
+  overrides) or flutter_bloc 9 (blocs, cubits, `RepositoryProvider`). No
+  service locator.
+- **MVVM pages**: every screen extends `BasePage` (or `BaseAsyncPage`) and
+  pairs with a view model; the base handles the scaffold, lifecycle hooks
+  and loading/error states, so a data screen implements only its success
+  view.
 - **Routing**: go_router 18 with per-tab navigation stacks, an adaptive
   bottom bar or rail, validated deep-link parameters and a not-found page.
-- **Networking**: Dio-based `ApiClient` returning `Result` values; bearer
-  token attachment; retries for idempotent requests only; request logging with
-  redaction of tokens, passwords and keys; cancellation; typed failures.
-- **Storage**: typed preferences, secure storage for secrets, resumable
-  migrations, clean-up of Keychain leftovers after reinstall, a "clear local
-  data" flow.
+- **Networking**: Dio-based `ApiClient` (REST) and `GraphQLClient` sharing
+  one policy: bearer token, retries for idempotent requests only, redacted
+  logging, cancellation, typed failures. The example feature switches
+  between REST and GraphQL with one config value.
+- **Storage**: drift (SQLite) database with schema migrations, typed
+  preferences, secure storage for secrets, key-value migrations, clean-up
+  of Keychain leftovers after reinstall, a "clear local data" flow.
 - **Design system**: Material 3 light/dark themes from one seed color,
   spacing/radius/size tokens, buttons, fields, dialogs, loading/empty/error
   views; 48 dp touch targets and contrast checked in tests.
@@ -62,7 +74,7 @@ committing to a backend or third-party services.
   locale, runtime language switching with device fallback.
 - **Reliability**: global error handlers, a pluggable `ErrorReporter`, clear
   loading/empty/error/success states, an offline fallback.
-- **Quality**: 126 unit/widget tests, 2 integration tests, strict lints
+- **Quality**: 197 unit/widget tests, 4 integration tests, strict lints
   (very_good_analysis), a single `melos run validate` gate shared with CI.
 - **Tooling**: rename script, VS Code and IntelliJ launch configurations,
   Dependabot, manual release workflow.
@@ -78,6 +90,7 @@ committing to a backend or third-party services.
 | Xcode | 27 (tested) | iOS builds; CocoaPods 1.17 |
 | Android | minSdk 24 (Flutter default), target/compile SDK 36 | |
 | iOS | 15.0+ | |
+| Network access to GitHub at build time | | `sqlite3` downloads prebuilt, checksum-verified SQLite binaries through its build hook |
 
 Run `flutter doctor` to confirm your setup.
 
@@ -86,18 +99,22 @@ Run `flutter doctor` to confirm your setup.
 ```
 .
 ├── apps/
-│   └── app/                  Example application
-│       ├── lib/              bootstrap, app shell (config, DI, errors, router), features/
-│       ├── config/           dev.json, staging.json, prod.json (build configuration)
-│       ├── test/             unit and widget tests
+│   ├── app/                  Example app with Riverpod
+│   └── app_bloc/             Same example app with Bloc
+│       ├── lib/              bootstrap, app (DI, router), features/<name>/<state + view>
+│       ├── config/           dev.json, dev_graphql.json, staging.json, prod.json
+│       ├── test/             unit, bloc and widget tests
 │       ├── integration_test/ end-to-end flows (device required)
 │       └── android/ ios/ web/
 ├── packages/
 │   ├── core/                 Result, failures, AppConfig, logging, validators (pure Dart)
-│   ├── networking/           ApiClient, interceptors, error mapping (pure Dart)
+│   ├── networking/           ApiClient (REST), GraphQLClient, interceptors (pure Dart)
 │   ├── storage/              KeyValueStore, SecureStore, migrations
+│   ├── database/             drift (SQLite): schema, DAOs, schema migrations
 │   ├── design_system/        tokens, themes, components, responsive layout
-│   └── localization/         ARB files and generated AppLocalizations
+│   ├── localization/         ARB files and generated AppLocalizations
+│   ├── app_foundation/       start-up, config, errors, session, settings, shared screens
+│   └── feature_posts/        example feature: domain, REST/GraphQL data, cache, widgets
 ├── tool/                     workspace scripts (checks, rename, integration runner)
 ├── docs/                     guides (see below)
 ├── .github/                  CI, integration and release workflows, templates
@@ -116,22 +133,58 @@ Guides: [architecture](docs/architecture.md) ·
 ## Architecture
 
 ```
-app ──► design_system
-    ──► localization
-    ──► networking ──► core
-    ──► storage ─────► core
-    ──► core
+apps (Riverpod / Bloc: state, DI, routing)
+  └─► feature_posts (domain, data, stateless widgets)
+        └─► app_foundation (start-up, config, errors, settings, shared screens)
+              └─► design_system · localization · networking · storage · database
+                                                   └─► core
 ```
 
 - Apps depend on packages; packages never depend on apps.
 - `core` and `networking` are pure Dart.
-- Riverpod and go_router are used only in apps; packages expose plain
-  classes and the app wires them together with providers.
-- Features live in the app (`lib/features/<name>/{domain,data,presentation}`)
-  until another app needs them.
+- Riverpod, Bloc and go_router are used only in apps.
+- A feature used by one app lives in the app; a feature shared by apps is a
+  `feature_<name>` package with everything except state management and
+  routing.
+
+**Why posts code is in two places.** `packages/feature_posts` holds the
+parts of the posts feature that both example apps share (model, REST/GraphQL
+data sources, offline cache, repository, stateless widgets);
+`apps/<app>/lib/features/posts/` holds only that app's pages and view
+models. It is a package only because two apps use it. Once you keep a single
+app, move `packages/feature_posts/lib/src` into
+`apps/<app>/lib/features/posts/` (and its tests), then delete the package:
+new features go straight into the app (see
+[docs/adding-features.md](docs/adding-features.md)).
 
 `melos run check:packages` enforces these rules. Details, start-up order and
 the reasoning behind each package: [docs/architecture.md](docs/architecture.md).
+
+## Choosing Riverpod or Bloc
+
+Both apps have identical screens, routes, flavors and behaviour, and use the
+same packages. Only the presentation layer differs:
+
+| | `apps/app` (Riverpod) | `apps/app_bloc` (Bloc) |
+| --- | --- | --- |
+| DI | Providers + `ProviderScope` overrides | `RepositoryProvider`s |
+| Pages | `BasePage` / `BaseAsyncPage` + `viewModelProvider` | `BasePage` / `BaseAsyncPage` + `createViewModel` |
+| View models | `Notifier`, `AsyncViewModel` | `Bloc`, `Cubit`, `AsyncCubit` |
+| Theme/locale | `Notifier` providers | `ThemeCubit`, `LocaleCubit` |
+| Tests | Widget tests with provider overrides | `bloc_test` + widget tests |
+
+To keep only one:
+
+```sh
+git rm -r apps/app_bloc      # keep Riverpod
+# or: git rm -r apps/app     # keep Bloc
+```
+
+Then remove the deleted app from the build loops in
+`.github/workflows/ci.yml`, the `app` choices in `release.yml`, and its
+entries in `.vscode/launch.json` and `.idea/runConfigurations/`. Run
+`flutter pub get` and `melos run validate`. More in
+[docs/architecture.md](docs/architecture.md#riverpod-or-bloc).
 
 ## Getting started
 
@@ -142,25 +195,27 @@ flutter pub get                  # resolves the whole workspace
 dart run melos run validate      # optional: the full quality gate (1–2 minutes)
 ```
 
-Run the example app on a connected device or emulator:
+Run an example app on a connected device or emulator:
 
 ```sh
-cd apps/app
+cd apps/app                      # or apps/app_bloc
 flutter run --flavor dev --dart-define-from-file=config/dev.json
 ```
 
 The `dev` configuration uses the public placeholder API
 [JSONPlaceholder](https://jsonplaceholder.typicode.com) so the posts screen
-has data. Tests never call it.
+has data. `config/dev_graphql.json` fetches the same data over GraphQL from
+[GraphQLZero](https://graphqlzero.almansi.me). Tests never call either.
 
 Optional: `dart pub global activate melos 8.9.0` lets you type `melos ...`
 instead of `dart run melos ...`. The rest of this README uses the short form.
 
 ## Environments and flavors
 
-| Environment | Command (from `apps/app`) |
+| Environment | Command (from `apps/app` or `apps/app_bloc`) |
 | --- | --- |
 | dev | `flutter run --flavor dev --dart-define-from-file=config/dev.json` |
+| dev (GraphQL) | `flutter run --flavor dev --dart-define-from-file=config/dev_graphql.json` |
 | staging | `flutter run --flavor staging --dart-define-from-file=config/staging.json` |
 | prod | `flutter run --release --flavor prod --dart-define-from-file=config/prod.json` |
 | web | `flutter run -d chrome --dart-define-from-file=config/dev.json` (web has no native flavors) |
@@ -170,21 +225,21 @@ flavor and `APP_ENV` disagree. `config/staging.json` and `config/prod.json`
 point to placeholder hosts: staging shows network errors until you set a real
 URL, and **prod refuses to start** until you do. Builds use the same flags
 (`flutter build apk|appbundle|ipa|web ...`). Launch configurations for each
-flavor are in `.vscode/launch.json` and `.idea/runConfigurations/`.
+app and flavor are in `.vscode/launch.json` and `.idea/runConfigurations/`.
 
 ## App identifiers and display names
 
-| Flavor | Android ID | iOS bundle ID | Name |
+| Flavor | `apps/app` Android / iOS ID | `apps/app_bloc` Android / iOS ID | Names |
 | --- | --- | --- | --- |
-| dev | `com.app.flutter_template.dev` | `com.app.flutter-template.dev` | Template Dev |
-| staging | `com.app.flutter_template.staging` | `com.app.flutter-template.staging` | Template Staging |
-| prod | `com.app.flutter_template` | `com.app.flutter-template` | Flutter Template |
+| dev | `com.app.flutter_template.dev` / `com.app.flutter-template.dev` | `com.app.flutter_template.bloc.dev` / `com.app.flutter-template.bloc.dev` | Template Dev · Bloc Template Dev |
+| staging | `com.app.flutter_template.staging` / `com.app.flutter-template.staging` | `com.app.flutter_template.bloc.staging` / `com.app.flutter-template.bloc.staging` | Template Staging · Bloc Template Staging |
+| prod | `com.app.flutter_template` / `com.app.flutter-template` | `com.app.flutter_template.bloc` / `com.app.flutter-template.bloc` | Flutter Template · Bloc Template |
 
-Rename them in one step (commit first, then review the diff):
+Rename an app in one step (commit first, then review the diff):
 
 ```sh
-dart run tool/rename_app.dart --android-id com.acme.shop --ios-id com.acme.shop --name "Acme Shop" --dry-run
-dart run tool/rename_app.dart --android-id com.acme.shop --ios-id com.acme.shop --name "Acme Shop"
+dart run tool/rename_app.dart --app-dir apps/app --android-id com.acme.shop --ios-id com.acme.shop --name "Acme Shop" --dry-run
+dart run tool/rename_app.dart --app-dir apps/app --android-id com.acme.shop --ios-id com.acme.shop --name "Acme Shop"
 ```
 
 Then change `appTitle` in `packages/localization/lib/l10n/*.arb` and run
@@ -193,12 +248,13 @@ Then change `appTitle` in `packages/localization/lib/l10n/*.arb` and run
 
 ## Configuration and secrets
 
-Build configuration lives in `apps/app/config/<env>.json`:
+Build configuration lives in `apps/<app>/config/<env>.json`:
 
 | Key | Required | Values |
 | --- | --- | --- |
 | `APP_ENV` | yes | `dev`, `staging`, `prod` |
 | `API_BASE_URL` | yes | `https` URL (`http` allowed in dev only) |
+| `GRAPHQL_URL` | no | `https` URL; when set, the posts feature uses GraphQL |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warning`, `error`, `off` |
 | `NETWORK_LOGS` | no (`false`) | `true`, `false` |
 
@@ -214,15 +270,19 @@ signing: [docs/environment-configuration.md](docs/environment-configuration.md).
 
 ## Adding packages, features and apps
 
-- **Feature**: create `apps/app/lib/features/<name>/` with `domain/`, `data/`
-  and `presentation/` as needed, add strings, a route and tests. Walkthrough:
-  [docs/adding-features.md](docs/adding-features.md).
+- **Feature**: add `features/<name>/` to the app (domain, data, presentation
+  as needed), strings, a route and tests; move it to a `feature_<name>`
+  package when another app needs it. Walkthrough with Riverpod and Bloc
+  variants: [docs/adding-features.md](docs/adding-features.md).
+- **Database table**: edit `packages/database`, bump the schema version, run
+  `build_runner` and `drift_dev make-migrations`:
+  [packages/database/README.md](packages/database/README.md).
 - **Package**: `flutter create --template=package packages/<name>`, add
   `resolution: workspace` and the shared SDK constraint, remove the generated
-  `analysis_options.yaml`, add tests. Steps:
+  `analysis_options.yaml`, add tests:
   [docs/adding-packages.md](docs/adding-packages.md#new-package).
-- **Second app**: `flutter create` under `apps/`, join the workspace, reuse
-  the bootstrap and flavor setup:
+- **Another app**: copy an app's platform folders, run the rename tool and
+  reuse `app_foundation`:
   [docs/adding-packages.md](docs/adding-packages.md#second-application).
 
 New workspace members under `apps/*` and `packages/*` are picked up
@@ -230,22 +290,24 @@ automatically; run `melos bootstrap` afterwards.
 
 ## Conventions
 
-**State management and DI.** Infrastructure providers live in
-`apps/app/lib/app/di/providers.dart` and are overridden in `bootstrap.dart`
-(and in tests). Feature providers sit next to their feature. Use
-`Notifier`/`AsyncNotifier` for state with actions and `FutureProvider` for
-simple loads; mark screen-scoped providers `isAutoDispose: true`. Widgets
-render state and forward intents; they contain no business logic.
-Riverpod's automatic retry is disabled; retries are explicit.
+**State management and DI.** Infrastructure is created once by
+`initializeAppServices()` (app_foundation) and exposed by each app: Riverpod
+overrides (`apps/app/lib/app/di/providers.dart`) or `RepositoryProvider`s
+(`apps/app_bloc/lib/app/app.dart`). Screens follow MVVM: a page extends
+`BasePage`/`BaseAsyncPage` (`lib/app/base/`) and talks to its view model
+(`Notifier`/`AsyncViewModel` or `Bloc`/`Cubit`/`AsyncCubit`); the repository
+is the model. Pages render state and forward intents and contain no
+business logic. See
+[docs/architecture.md](docs/architecture.md#pages-and-view-models-mvvm).
 
-**Networking.** Call the API only through `ApiClient`. Paths are relative
-(`'posts'`). Methods return `Result<T>`; decoders throw `FormatException` on
-bad payloads. Only `GET`/`HEAD`/`OPTIONS` are retried automatically.
+**Networking.** Call APIs only through `ApiClient` or `GraphQLClient`. REST
+paths are relative (`'posts'`). Methods return `Result<T>`; decoders throw
+`FormatException` on bad payloads. Only `GET`/`HEAD`/`OPTIONS` and GraphQL
+queries are retried automatically.
 
-**Storage.** Preferences and small caches in `KeyValueStore` (not encrypted);
-tokens and secrets in `SecureStore`. Namespace keys (`settings.*`,
-`cache.*`, `session.*`). Append a `StorageMigration` when persisted data
-changes shape.
+**Storage.** Structured data and caches in the drift database; preferences
+in `KeyValueStore`; tokens and secrets in `SecureStore`. Neither the database
+nor preferences are encrypted. Namespace keys (`settings.*`, `session.*`).
 
 **Code style.** `package:` imports only, Dart 3.13 constructor syntax
 (`const new(...)`), `snake_case` files, public package API in
@@ -259,16 +321,21 @@ changes shape.
 2. `melos run codegen`, then commit the generated files.
 3. Use `context.l10n.yourKey`.
 
-To add a language, add `app_<code>.arb` and an entry in the settings
-language list. See [docs/development.md](docs/development.md#localization).
+To add a language, add `app_<code>.arb` and an entry in the language list
+of `SettingsView` (app_foundation). See
+[docs/development.md](docs/development.md#localization).
 
 ## Code generation
 
-The only generator is `flutter gen-l10n`. Its output is committed so fresh
-clones build immediately.
+| Generator | Where | Output |
+| --- | --- | --- |
+| `flutter gen-l10n` | `packages/localization` | `lib/src/generated/` |
+| `build_runner` + drift | `packages/database` | `*.g.dart`, schema snapshots in `drift_schemas/` |
+
+Generated files are committed so fresh clones build immediately.
 
 ```sh
-melos run codegen         # regenerate
+melos run codegen         # regenerate everything
 melos run codegen:check   # regenerate and fail if the committed files were stale
 ```
 
@@ -278,9 +345,9 @@ melos run codegen:check   # regenerate and fail if the committed files were stal
 | --- | --- |
 | `melos run format` / `format:check` | Format / verify formatting |
 | `melos run analyze` | Static analysis (infos and warnings fail) for every package and `tool/` |
-| `melos run test` | Unit and widget tests in every package |
+| `melos run test` | Unit, bloc and widget tests in every package |
 | `melos run test:coverage` | Tests with `coverage/lcov.info` per package |
-| `melos run test:integration` | Integration tests on a device (`DEVICE=<id>`) |
+| `melos run test:integration` | Integration tests of every app on a device (`DEVICE=<id>`, `APP=apps/<name>`) |
 | `melos run check:packages` | Workspace rules (tests present, dependency direction, no cycles) |
 | `melos run validate` | All of the above except coverage and integration: the CI gate |
 | `melos run clean` | `flutter clean` everywhere |
@@ -292,9 +359,9 @@ Testing strategy: [docs/testing.md](docs/testing.md).
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| `ci.yml` | pull requests, pushes to `main` | Package checks, format, codegen check, analysis, tests with coverage; then Android (debug dev + obfuscated release staging), iOS (debug, no codesign) and web builds. No secrets needed. |
-| `integration.yml` | manual, weekly | Integration tests on an Android emulator (API 35). |
-| `release.yml` | manual only | Quality gate, then a signed Android App Bundle for `staging` or `prod` using secrets from protected GitHub environments; uploads it as a run artifact. Does not publish to stores. |
+| `ci.yml` | pull requests, pushes to `main` | Package checks, format, codegen check, analysis, tests with coverage; then, for both apps, Android (debug dev + obfuscated release staging), iOS (debug, no codesign) and web builds. No secrets needed. |
+| `integration.yml` | manual, weekly | Integration tests of both apps on an Android emulator (API 35). |
+| `release.yml` | manual only | Choose app and flavor; quality gate, then a signed Android App Bundle using secrets from protected GitHub environments; uploads it as a run artifact. Does not publish to stores. |
 
 Actions are pinned to commit SHAs and updated by Dependabot. Workflows only
 have read access to the repository and never push commits. iOS signing and
@@ -304,12 +371,12 @@ macOS runners are needed for iOS builds and cost more minutes than Linux.
 
 ## Platform support
 
-| Platform | Status | Verified on this template |
+| Platform | Status | Verified on this template (both apps unless noted) |
 | --- | --- | --- |
-| Android | Supported | Debug (dev) and release (staging, obfuscated) builds; app run and integration tests on an Android 17 (API 37) emulator |
-| iOS | Supported | Debug build without codesigning (dev flavor). Not run on a simulator or device; signing not configured. |
-| Web | Builds | Release build compiles. No flavors; secure storage on web is not a security boundary; not tested in a browser. |
-| macOS, Windows, Linux | Not included | Add with `flutter create --platforms=macos,windows,linux apps/app` and test the plugins you use. |
+| Android | Supported | Debug (dev) and release (staging, obfuscated) builds; integration tests (including on-device SQLite) on an Android emulator |
+| iOS | Supported | Debug builds without codesigning (dev flavor). Not run on a simulator or device; signing not configured. |
+| Web | Builds | Release builds compile and include drift's `sqlite3.wasm`/`drift_worker.js`. No flavors; not tested in a browser; secure storage on web is not a security boundary. |
+| macOS, Windows, Linux | Not included | Add with `flutter create --platforms=macos,windows,linux apps/<app>` and test the plugins you use. |
 
 ## Security checklist
 
@@ -317,6 +384,7 @@ Before shipping, at minimum:
 
 - [ ] Real production API in `config/prod.json`; no secrets in config, code or assets.
 - [ ] Tokens stored only via `SessionStore`; sign-out clears local data.
+- [ ] Nothing sensitive in the database or preferences (neither is encrypted), or database encryption enabled.
 - [ ] Sensitive field names added to `Redactor.sensitiveKeys`.
 - [ ] Release keystore and Apple credentials kept outside the repo; `production` environment protected.
 - [ ] Deep-link domains verified (App Links / Universal Links) and parameters validated.
@@ -331,14 +399,17 @@ The complete list and what the template already does:
 
 | Symptom | Fix |
 | --- | --- |
-| "Invalid build configuration" screen | Pass `--flavor <env> --dart-define-from-file=config/<env>.json` with matching names; for prod, set a real `API_BASE_URL`. |
+| "Invalid build configuration" screen | Pass `--flavor <env> --dart-define-from-file=config/<env>.json` with matching names; for prod, set a real `API_BASE_URL` (and `GRAPHQL_URL` if used). |
 | `No workspace packages matching ...` or version solving fails | Run `flutter pub get` from the repository root; check that every package has `resolution: workspace` and `sdk: ^3.13.0`. |
 | `melos: command not found` | Use `dart run melos ...`, or `dart pub global activate melos 8.9.0` and add `~/.pub-cache/bin` to `PATH`. |
+| Build fails while "Running build hooks" / downloading sqlite3 | The build needs network access to GitHub releases; behind a proxy, mirror the binaries and set the sqlite3 `url_pattern` hook option (see `packages/database/README.md`). |
+| build_runner warns "These options have been removed and were ignored: --delete-conflicting-outputs" | build_runner 2.16 removed the flag; run `dart run build_runner build`. |
 | Android: "Release keystore not configured" warning | Expected without signing secrets; see [release signing](docs/environment-configuration.md#release-signing). |
-| Android: `GeneratedPluginRegistrant` cannot find `integration_test` in a release build | Another Flutter command regenerated plugin files mid-build; don't run builds in parallel in the same app. Re-run the build. |
-| iOS: `pod install` errors or "Unable to find a target" | `cd apps/app/ios && pod repo update && pod install`; ensure you opened `Runner.xcworkspace`, not the `.xcodeproj`. |
+| Android: `GeneratedPluginRegistrant` cannot find `integration_test` in a release build | Another Flutter command regenerated plugin files mid-build; don't run builds in parallel in the same workspace. Re-run the build. |
+| iOS: `pod install` errors or "Unable to find a target" | `cd apps/<app>/ios && pod repo update && pod install`; ensure you opened `Runner.xcworkspace`, not the `.xcodeproj`. |
 | iOS: "must specify a --flavor" | Expected: there is no default scheme. Use `--flavor dev|staging|prod`. |
-| `codegen:check` fails | Run `melos run codegen` and commit `packages/localization/lib/src/generated/`. |
+| Web: database errors at start-up | `web/sqlite3.wasm` and `web/drift_worker.js` must exist and match the `sqlite3`/`drift` versions (see `packages/database/README.md`). |
+| `codegen:check` fails | Run `melos run codegen` and commit the regenerated files. |
 | Posts screen shows an error in staging | `config/staging.json` uses a placeholder host; set your API. |
 
 ## Contributing
@@ -357,7 +428,10 @@ Not included (by design or pending decisions):
 
 - Authentication flow and token refresh (backend-specific; `SessionStore` and
   `AuthInterceptor` are the extension points).
-- Database layer (add `drift` or similar when a feature needs relational data).
+- GraphQL normalized cache, subscriptions and generated types (the client is
+  intentionally minimal; adopt `graphql`/`ferry` inside data sources if
+  needed).
+- Database encryption (available through the sqlite3 hook options).
 - Crash reporting, analytics, push notifications, payments (optional
   integration points documented).
 - Deep-link platform configuration (needs your domain).

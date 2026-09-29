@@ -17,11 +17,11 @@ global install (`dart pub global activate melos 8.9.0`) lets you type
 | `melos run format` | Formats every Dart file. |
 | `melos run format:check` | Fails if any file is not formatted. |
 | `melos run analyze` | `flutter analyze --fatal-infos --fatal-warnings` in every package, then `dart analyze` on `tool/`. |
-| `melos run codegen` | Regenerates localization code (`flutter gen-l10n`). |
+| `melos run codegen` | Regenerates all generated code: `codegen:l10n` (`flutter gen-l10n`) and `codegen:build_runner` (drift). |
 | `melos run codegen:check` | Regenerates and fails if the committed output was stale. |
 | `melos run test` | Unit and widget tests in every package, in dependency order. |
 | `melos run test:coverage` | Same, writing `coverage/lcov.info` in each package. |
-| `melos run test:integration` | Integration tests on a device (`DEVICE=<id>` to pick one). |
+| `melos run test:integration` | Integration tests of every app on a device (`DEVICE=<id>`, `APP=apps/app_bloc` to run one app). |
 | `melos run check:packages` | Workspace rules: tests exist, SDK constraints, dependency direction, no cycles. |
 | `melos run validate` | `check:packages` → `format:check` → `codegen:check` → `analyze` → `test`. Same gate as CI. |
 | `melos run clean` | `flutter clean` in every package. |
@@ -38,7 +38,8 @@ cd apps/app
 flutter run --flavor dev --dart-define-from-file=config/dev.json
 ```
 
-Both flags are required on Android and iOS. The app refuses to start (and
+The same commands work for the Bloc app in `apps/app_bloc`. Both flags are
+required on Android and iOS. The app refuses to start (and
 lists the problems) if the flavor and `APP_ENV` disagree. VS Code and
 IntelliJ/Android Studio launch configurations for each flavor are included
 (`.vscode/launch.json`, `.idea/runConfigurations/`).
@@ -68,22 +69,31 @@ localized strings as parameters.
 
 ## Code generation
 
-The only generator in use is `flutter gen-l10n`. Generated files are
-committed so a fresh clone builds without extra steps, and
-`melos run codegen:check` (part of `validate` and CI) fails if they are out of
-date.
+Two generators are used:
 
-If you add `build_runner`-based generators (for example `json_serializable`),
-add a Melos script with `packageFilters: dependsOn: build_runner` and extend
-`tool/check_codegen.dart` so CI verifies their output too.
+| Generator | Package | Output |
+| --- | --- | --- |
+| `flutter gen-l10n` | `localization` | `lib/src/generated/` |
+| `build_runner` + `drift_dev` | `database` | `lib/**/*.g.dart` |
+
+Generated files are committed so a fresh clone builds without extra steps,
+and `melos run codegen:check` (part of `validate` and CI) fails if they are
+out of date. It runs every generator in every workspace member that uses it,
+so new `build_runner` users (for example `json_serializable`) are covered
+automatically.
+
+build_runner 2.16 removed `--delete-conflicting-outputs`; run plain
+`dart run build_runner build` (or `watch`). Schema changes also need
+`dart run drift_dev make-migrations` (see `packages/database/README.md`).
 
 ## Naming and file organization
 
 - Packages: `snake_case`, a noun describing the responsibility
   (`networking`, not `network_utils`).
-- Files: `snake_case.dart`; `*_page.dart` for routed screens,
-  `*_controller(s).dart` for Riverpod notifiers, `*_repository.dart`,
-  `*_api.dart`, `*_test.dart`.
+- Files: `snake_case.dart`; `*_page.dart` for routed screens, `*_view.dart`
+  for stateless screen bodies shared by apps, `*_controller(s).dart` for
+  Riverpod notifiers, `*_bloc.dart` / `*_cubit.dart` for Bloc,
+  `*_repository.dart`, `*_data_source.dart`, `*_dao.dart`, `*_test.dart`.
 - Public API of a package: `lib/<package>.dart` exports; implementation in
   `lib/src/`. Never import another package's `src/`.
 - Imports: always `package:` imports, sorted (the analyzer enforces both).

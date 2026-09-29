@@ -14,8 +14,15 @@ import 'package:yaml/yaml.dart';
 /// Packages that must stay pure Dart (usable from CLIs, servers, isolates).
 const pureDartPackages = {'core', 'networking'};
 
-/// Dependencies that belong to applications only.
-const appOnlyDependencies = {'flutter_riverpod', 'riverpod', 'go_router'};
+/// Dependencies that belong to applications only: state management and
+/// routing are app decisions, so shared packages stay usable by any app.
+const appOnlyDependencies = {
+  'flutter_riverpod',
+  'riverpod',
+  'flutter_bloc',
+  'bloc',
+  'go_router',
+};
 
 void main() {
   final root = Directory.current;

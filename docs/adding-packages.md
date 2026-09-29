@@ -71,22 +71,28 @@ Riverpod/go_router stay in apps, SDK constraints match the root.
    `design_system: any`, ...). Delete `analysis_options.yaml` and
    `pubspec.lock`.
 
-3. Reuse the app skeleton from `apps/app/lib`: `bootstrap.dart`,
-   `app/di/providers.dart`, `app/config/`, `app/error/`. Copy, then trim.
+3. Start-up and shared screens come from `app_foundation`: call
+   `initializeAppServices()` in the new app's `bootstrap.dart` and expose the
+   services through your DI (see `apps/app/lib/bootstrap.dart` for Riverpod
+   or `apps/app_bloc/lib/bootstrap.dart` for Bloc).
 
-4. Flavors: copy `android/app/build.gradle.kts` flavor blocks and
-   `network_security_config.xml` files; for iOS, recreate the per-flavor
-   build configurations, xcconfig files, schemes and Podfile mapping
-   described in [environment-configuration.md](environment-configuration.md#identifiers-and-display-names).
-   Add `config/{dev,staging,prod}.json`.
+4. Flavors: the fastest path is how `apps/app_bloc` was created: copy
+   `android/`, `ios/`, `web/` and `config/` from `apps/app` (without
+   `build/`, `Pods/`, `.dart_tool/` and generated files), then give it its
+   own identifiers:
+
+   ```sh
+   dart run tool/rename_app.dart --app-dir apps/admin \
+     --android-id com.acme.admin --ios-id com.acme.admin --name "Acme Admin"
+   ```
 
 5. App-specific strings: either add them to `packages/localization` (shared)
    or give the app its own `l10n.yaml` and ARB files. `melos run codegen`
-   runs `flutter gen-l10n` in every package with an `l10n.yaml`; extend
-   `tool/check_codegen.dart` if the new app generates code.
+   and `codegen:check` run `flutter gen-l10n` in every member with an
+   `l10n.yaml` (and `build_runner` wherever it is a dependency).
 
-6. CI: add build steps for the new app in `.github/workflows/ci.yml`;
-   `tool/run_integration_tests.dart` targets `apps/app` and needs a parameter
-   if the new app has integration tests.
+6. CI: add the app to the build loops in `.github/workflows/ci.yml` and to
+   the `app` choices in `release.yml`. `melos run test:integration` picks up
+   any app with an `integration_test/` folder automatically.
 
 7. Run `melos bootstrap` and `melos run validate`.

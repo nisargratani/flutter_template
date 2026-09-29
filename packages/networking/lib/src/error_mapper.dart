@@ -52,6 +52,13 @@ AppFailure _mapStatus(DioException error, String request, StackTrace trace) {
       stackTrace: trace,
     );
   }
+  if (status == 404) {
+    return NotFoundFailure(
+      '$request returned 404',
+      cause: error,
+      stackTrace: trace,
+    );
+  }
   return ServerFailure(
     '$request returned $status',
     statusCode: status,

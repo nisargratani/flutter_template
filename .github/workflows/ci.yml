@@ -82,18 +82,23 @@ jobs:
 
       - run: flutter pub get --enforce-lockfile
 
-      - name: Debug APK (dev)
-        working-directory: apps/app
-        run: flutter build apk --debug --flavor dev --dart-define-from-file=config/dev.json
+      # Builds run one app at a time: parallel Flutter builds in the same
+      # workspace can race on generated plugin files.
+      - name: Debug APKs (dev)
+        run: |
+          for app in apps/app apps/app_bloc; do
+            (cd "$app" && flutter build apk --debug --flavor dev --dart-define-from-file=config/dev.json)
+          done
 
       # Compiles the release configuration (R8, obfuscation). Without signing
-      # secrets Gradle falls back to the debug key; this APK is not shippable.
+      # secrets Gradle falls back to the debug key; these APKs are not shippable.
       - name: Release APK compile check (staging)
-        working-directory: apps/app
-        run: >-
-          flutter build apk --release --flavor staging
-          --dart-define-from-file=config/staging.json
-          --obfuscate --split-debug-info=build/debug-info
+        run: |
+          for app in apps/app apps/app_bloc; do
+            (cd "$app" && flutter build apk --release --flavor staging \
+              --dart-define-from-file=config/staging.json \
+              --obfuscate --split-debug-info=build/debug-info)
+          done
 
   build-ios:
     name: Build iOS (no codesign)
@@ -111,9 +116,11 @@ jobs:
 
       - run: flutter pub get --enforce-lockfile
 
-      - name: Debug build (dev)
-        working-directory: apps/app
-        run: flutter build ios --debug --no-codesign --flavor dev --dart-define-from-file=config/dev.json
+      - name: Debug builds (dev)
+        run: |
+          for app in apps/app apps/app_bloc; do
+            (cd "$app" && flutter build ios --debug --no-codesign --flavor dev --dart-define-from-file=config/dev.json)
+          done
 
   build-web:
     name: Build web
@@ -131,6 +138,8 @@ jobs:
 
       - run: flutter pub get --enforce-lockfile
 
-      - name: Release build (staging configuration)
-        working-directory: apps/app
-        run: flutter build web --release --dart-define-from-file=config/staging.json
+      - name: Release builds (staging configuration)
+        run: |
+          for app in apps/app apps/app_bloc; do
+            (cd "$app" && flutter build web --release --dart-define-from-file=config/staging.json)
+          done

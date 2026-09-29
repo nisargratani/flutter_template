@@ -67,6 +67,15 @@ final class UnauthorizedFailure extends AppFailure {
   String get kind => 'UnauthorizedFailure';
 }
 
+/// The requested resource does not exist (HTTP 404, or a GraphQL field that
+/// resolved to `null`). Transport-neutral so the UI handles both the same way.
+final class NotFoundFailure extends AppFailure {
+  const new(super.message, {super.cause, super.stackTrace});
+
+  @override
+  String get kind => 'NotFoundFailure';
+}
+
 /// The server answered with an unexpected HTTP status code.
 final class ServerFailure extends AppFailure {
   const new(
@@ -81,8 +90,6 @@ final class ServerFailure extends AppFailure {
 
   final int? statusCode;
 
-  bool get isNotFound => statusCode == 404;
-
   @override
   bool get isTransient =>
       statusCode == 408 ||
@@ -91,6 +98,27 @@ final class ServerFailure extends AppFailure {
 
   @override
   String toString() => '$kind($statusCode, $message)';
+}
+
+/// A GraphQL response contained `errors`.
+///
+/// [errors] holds the error messages and [codes] the `extensions.code` values
+/// (for example `BAD_USER_INPUT`). Messages come from the server: log them,
+/// but show users a localized message instead.
+final class GraphQLFailure extends AppFailure {
+  const new(
+    super.message, {
+    this.errors = const [],
+    this.codes = const [],
+    super.cause,
+    super.stackTrace,
+  });
+
+  final List<String> errors;
+  final List<String> codes;
+
+  @override
+  String get kind => 'GraphQLFailure';
 }
 
 /// A payload did not match the expected shape.

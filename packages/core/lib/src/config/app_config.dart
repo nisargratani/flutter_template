@@ -8,6 +8,7 @@ abstract final class ConfigKeys {
   static const apiBaseUrl = 'API_BASE_URL';
   static const logLevel = 'LOG_LEVEL';
   static const networkLogs = 'NETWORK_LOGS';
+  static const graphQLUrl = 'GRAPHQL_URL';
 }
 
 /// Thrown when the build configuration is missing or invalid.
@@ -35,6 +36,7 @@ final class AppConfig {
     required this.apiBaseUrl,
     required this.logLevel,
     required this.networkLogs,
+    this.graphQLUrl,
   });
 
   /// Parses and validates raw configuration values.
@@ -107,31 +109,38 @@ final class AppConfig {
       );
     }
 
-    // API base URL ----------------------------------------------------------
-    final rawBaseUrl = read(ConfigKeys.apiBaseUrl);
-    final baseUrl = rawBaseUrl == null ? null : Uri.tryParse(rawBaseUrl);
-    if (rawBaseUrl == null) {
-      problems.add('${ConfigKeys.apiBaseUrl} is not set.');
-    } else if (baseUrl == null || !baseUrl.isAbsolute || baseUrl.host.isEmpty) {
-      problems.add(
-        '${ConfigKeys.apiBaseUrl} "$rawBaseUrl" is not an absolute URL.',
-      );
-    } else if (baseUrl.scheme != 'https' &&
-        !(baseUrl.scheme == 'http' && environment == AppEnvironment.dev)) {
-      problems.add(
-        '${ConfigKeys.apiBaseUrl} must use https '
-        '(plain http is only accepted in dev).',
-      );
+    // URLs -------------------------------------------------------------------
+    Uri? parseUrl(String key, {required bool required}) {
+      final raw = read(key);
+      if (raw == null) {
+        if (required) problems.add('$key is not set.');
+        return null;
+      }
+      final url = Uri.tryParse(raw);
+      if (url == null || !url.isAbsolute || url.host.isEmpty) {
+        problems.add('$key "$raw" is not an absolute URL.');
+        return null;
+      }
+      if (url.scheme != 'https' &&
+          !(url.scheme == 'http' && environment == AppEnvironment.dev)) {
+        problems.add(
+          '$key must use https (plain http is only accepted in dev).',
+        );
+      }
+      if (environment == AppEnvironment.prod && _isPlaceholderHost(url.host)) {
+        problems.add(
+          '$key still points to the placeholder host "${url.host}". '
+          'Set the real production value in config/prod.json.',
+        );
+      }
+      return url;
     }
+
+    final baseUrl = parseUrl(ConfigKeys.apiBaseUrl, required: true);
+    final graphQLUrl = parseUrl(ConfigKeys.graphQLUrl, required: false);
 
     // Production-only rules -------------------------------------------------
     if (environment == AppEnvironment.prod) {
-      if (baseUrl != null && _isPlaceholderHost(baseUrl.host)) {
-        problems.add(
-          '${ConfigKeys.apiBaseUrl} still points to the placeholder host '
-          '"${baseUrl.host}". Set the real production API in config/prod.json.',
-        );
-      }
       if (networkLogs ?? false) {
         problems.add('${ConfigKeys.networkLogs} must be false in prod.');
       }
@@ -145,6 +154,7 @@ final class AppConfig {
     return AppConfig(
       environment: environment!,
       apiBaseUrl: baseUrl!,
+      graphQLUrl: graphQLUrl,
       logLevel: logLevel!,
       networkLogs: networkLogs!,
     );
@@ -152,8 +162,11 @@ final class AppConfig {
 
   final AppEnvironment environment;
 
-  /// Base URL for the example API, always absolute.
+  /// Base URL for REST calls, always absolute.
   final Uri apiBaseUrl;
+
+  /// GraphQL endpoint, or `null` when the app does not use GraphQL.
+  final Uri? graphQLUrl;
   final LogLevel logLevel;
 
   /// Whether HTTP traffic is logged (redacted). Always `false` in prod.
@@ -178,5 +191,6 @@ final class AppConfig {
   @override
   String toString() =>
       'AppConfig(environment: ${environment.name}, apiBaseUrl: $apiBaseUrl, '
-      'logLevel: ${logLevel.name}, networkLogs: $networkLogs)';
+      'graphQLUrl: $graphQLUrl, logLevel: ${logLevel.name}, '
+      'networkLogs: $networkLogs)';
 }

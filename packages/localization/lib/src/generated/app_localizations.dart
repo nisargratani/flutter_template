@@ -416,6 +416,12 @@ abstract class AppLocalizations {
   /// **'API'**
   String get apiLabel;
 
+  /// Label for the GraphQL endpoint host (shown only when configured).
+  ///
+  /// In en, this message translates to:
+  /// **'GraphQL'**
+  String get graphQLLabel;
+
   /// Section heading for local data actions.
   ///
   /// In en, this message translates to:

@@ -64,6 +64,12 @@ melos:
 
     # --- Code generation -----------------------------------------------------
     codegen:
+      description: Regenerate all generated code (localization and drift).
+      steps:
+        - melos run codegen:l10n
+        - melos run codegen:build_runner
+
+    codegen:l10n:
       description: Regenerate localization files (flutter gen-l10n).
       exec:
         command: flutter gen-l10n
@@ -72,8 +78,17 @@ melos:
       packageFilters:
         fileExists: l10n.yaml
 
+    codegen:build_runner:
+      description: Run build_runner (drift) in packages that use it.
+      exec:
+        command: dart run build_runner build
+        concurrency: 1
+        failFast: true
+      packageFilters:
+        dependsOn: build_runner
+
     codegen:check:
-      description: Fail if generated localization files are out of date.
+      description: Fail if generated files (localization, drift) are out of date.
       run: dart run tool/check_codegen.dart
 
     # --- Tests ---------------------------------------------------------------
@@ -94,7 +109,7 @@ melos:
         orderDependents: true
 
     test:integration:
-      description: Run app integration tests on a connected device (DEVICE=<id> optional).
+      description: Run integration tests of every app on a device (DEVICE=<id>, APP=apps/<name> optional).
       run: dart run tool/run_integration_tests.dart
 
     # --- Checks --------------------------------------------------------------

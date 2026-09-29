@@ -1,5 +1,51 @@
 # Changelog
 
+## Unreleased: MVVM base pages
+
+### Added
+- `PageLayout` (app_foundation): shared page template with scaffold hooks,
+  back handling and lifecycle hooks (`onInit`, `onResume`, `onPause`,
+  `onDispose`), the successor of the old `CoreBasePageState`.
+- Riverpod app: `BasePage`, `BaseAsyncPage` and `AsyncViewModel`
+  (`lib/app/base/`); pages are single classes, view models replace the
+  former controllers (`PostsViewModel`, `PostDetailViewModel`,
+  `SettingsViewModel`).
+- Bloc app: `BasePage`, `BaseAsyncPage`, `AsyncCubit` and `ViewState`;
+  pages create and close their own blocs (`SettingsCubit` added,
+  `PostDetailCubit` now an `AsyncCubit`).
+- Base page tests in both apps.
+
+## Unreleased: drift, GraphQL and a Bloc variant
+
+### Added
+- `packages/database`: drift (SQLite) with the `CachedPosts` table, `PostsDao`,
+  schema snapshots (`drift_schemas/`) and `clearAll()`; web assets
+  (`sqlite3.wasm`, `drift_worker.js`) in both apps.
+- `GraphQLClient` and `HttpSettings` in `networking`; `GraphQLFailure` and a
+  transport-neutral `NotFoundFailure` in `core`; optional `GRAPHQL_URL`
+  configuration and `config/dev_graphql.json`.
+- `apps/app_bloc`: the example app built with flutter_bloc (blocs, cubits,
+  `RepositoryProvider`), with its own flavors and IDs, tests and integration
+  tests.
+- `packages/app_foundation`: start-up (`initializeAppServices`, `AppServices`),
+  configuration, error handling, session, settings and shared screens used
+  by both apps.
+- `packages/feature_posts`: posts domain, REST and GraphQL data sources,
+  drift-backed offline cache (list and detail), stateless widgets and test
+  doubles.
+- Melos scripts `codegen:l10n` and `codegen:build_runner`; `codegen:check`
+  also verifies drift output; integration runner covers every app.
+
+### Changed
+- HTTP 404 now maps to `NotFoundFailure` instead of `ServerFailure`.
+- The posts offline cache moved from key-value storage to SQLite (storage
+  migration v2 removes the old key).
+- CI and the release workflow build both apps; `check:packages` also keeps
+  Bloc out of shared packages.
+
+### Removed
+- Unused `mocktail` dev dependency from `apps/app`.
+
 ## Unreleased: modernization to Flutter 3.47
 
 Rebuilt the template on Flutter 3.47.5 / Dart 3.13.4 / Melos 8.9.0. See

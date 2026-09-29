@@ -12,8 +12,11 @@ environment:
 resolution: workspace
 
 dependencies:
+  app_foundation: any
   core: any
+  database: any
   design_system: any
+  feature_posts: any
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.4.3
@@ -25,11 +28,11 @@ dependencies:
   storage: any
 
 dev_dependencies:
+  drift: ^2.35.0
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-  mocktail: ^1.0.5
 
 flutter:
   uses-material-design: true

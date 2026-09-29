@@ -79,15 +79,24 @@ void main() {
       expect(result.failureOrNull, isA<UnauthorizedFailure>());
     });
 
-    test('maps HTTP 404 to ServerFailure with the status code', () async {
+    test('maps HTTP 404 to NotFoundFailure', () async {
       final adapter = FakeHttpAdapter.always(const FakeResponse(404));
 
       final result = await clientWith(adapter).get('x', decode: decodeId);
 
-      final failure = result.failureOrNull! as ServerFailure;
-      expect(failure.statusCode, 404);
-      expect(failure.isNotFound, isTrue);
+      expect(result.failureOrNull, isA<NotFoundFailure>());
     });
+
+    test(
+      'maps other HTTP errors to ServerFailure with the status code',
+      () async {
+        final adapter = FakeHttpAdapter.always(const FakeResponse(500));
+
+        final result = await clientWith(adapter).get('x', decode: decodeId);
+
+        expect((result.failureOrNull! as ServerFailure).statusCode, 500);
+      },
+    );
 
     test('maps connection errors to NetworkFailure', () async {
       final adapter = FakeHttpAdapter(

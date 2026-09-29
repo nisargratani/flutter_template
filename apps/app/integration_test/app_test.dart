@@ -1,16 +1,17 @@
-// End-to-end flows on a real device or simulator, with real storage and a
-// fake HTTP transport (no network or credentials needed).
+// End-to-end flows on a real device or simulator, with real storage (shared
+// preferences and an on-device SQLite database) and a fake HTTP transport
+// (no network or credentials needed).
 //
 // Run with `melos run test:integration` (see docs/testing.md).
 import 'package:app/app/app.dart';
 import 'package:app/app/di/providers.dart';
-import 'package:app/features/settings/data/settings_repository.dart';
+import 'package:app_foundation/app_foundation.dart';
 import 'package:core/core.dart';
+import 'package:database/database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:networking/networking.dart';
 import 'package:networking/testing.dart';
 import 'package:storage/storage.dart';
 
@@ -28,36 +29,39 @@ void main() {
   ];
 
   late SharedPreferencesKeyValueStore keyValueStore;
+  late AppDatabase database;
 
   setUp(() async {
     keyValueStore = await SharedPreferencesKeyValueStore.create();
     await keyValueStore.clear();
+    database = AppDatabase.open(name: 'integration_test');
+    await database.clearAll();
   });
 
+  tearDown(() => database.close());
+
+  /// Starts (or restarts) the app with fresh services on the same storage.
   Future<void> startApp(WidgetTester tester, FakeHttpAdapter adapter) async {
+    final services = AppServices.fromStores(
+      config: config,
+      keyValueStore: keyValueStore,
+      secureStore: InMemorySecureStore(),
+      database: database,
+      errorReporter: LoggingErrorReporter(),
+      httpClientAdapter: adapter,
+    );
     await tester.pumpWidget(
       ProviderScope(
         key: UniqueKey(),
         retry: (_, _) => null,
-        overrides: [
-          appConfigProvider.overrideWithValue(config),
-          keyValueStoreProvider.overrideWithValue(keyValueStore),
-          secureStoreProvider.overrideWithValue(InMemorySecureStore()),
-          apiClientProvider.overrideWithValue(
-            ApiClient.create(
-              baseUrl: config.apiBaseUrl,
-              httpClientAdapter: adapter,
-              maxRetries: 0,
-            ),
-          ),
-        ],
+        overrides: overridesFor(services),
         child: const App(),
       ),
     );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('browse posts, open one, and read it offline later', (
+  testWidgets('browse posts, open one, and read them offline later', (
     tester,
   ) async {
     final online = FakeHttpAdapter((request, _) async {
@@ -77,13 +81,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Body 2'), findsOneWidget);
 
-    // Restart without network: the cached list is shown and flagged.
+    // Restart without network: the list comes from the SQLite cache.
     await startApp(tester, FakeHttpAdapter.offline());
     await tester.tap(find.text('Posts'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Showing saved posts'), findsOneWidget);
     expect(find.text('Post title 3'), findsOneWidget);
+
+    // A cached post also opens offline.
+    await tester.tap(find.text('Post title 3'));
+    await tester.pumpAndSettle();
+    expect(find.text('Body 3'), findsOneWidget);
   });
 
   testWidgets('theme and language choices survive a restart', (tester) async {

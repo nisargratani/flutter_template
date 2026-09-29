@@ -1,7 +1,10 @@
 # Environment configuration
 
-The app has three environments, each with its own native flavor, application
-identifier, display name and build configuration file.
+Each app has three environments, each with its own native flavor,
+application identifier, display name and build configuration file. The
+tables use `apps/app`; `apps/app_bloc` is identical with `.bloc` inserted
+in the IDs (`com.app.flutter_template.bloc.dev`, ...) and "Bloc Template"
+as the name, so both apps can be installed side by side.
 
 | Environment | Flavor | Android application ID | iOS bundle ID | Display name | Config file |
 | --- | --- | --- | --- | --- | --- |
@@ -31,7 +34,7 @@ Web has no native flavors; the environment comes from `APP_ENV` alone.
 ## Configuration values
 
 Values are read with `String.fromEnvironment` in
-`apps/app/lib/app/config/config_reader.dart` and validated by
+`packages/app_foundation/lib/src/config/config_reader.dart` and validated by
 `AppConfig.fromMap` (`packages/core`).
 
 | Key | Required | Allowed values | Default |
@@ -40,6 +43,10 @@ Values are read with `String.fromEnvironment` in
 | `API_BASE_URL` | yes | absolute URL; `https` (plain `http` only in `dev`) | – |
 | `LOG_LEVEL` | no | `debug`, `info`, `warning`, `error`, `off` | `info` |
 | `NETWORK_LOGS` | no | `true`, `false` | `false` |
+| `GRAPHQL_URL` | no | absolute URL; same rules as `API_BASE_URL`. When set, the posts feature uses GraphQL instead of REST. | unset |
+
+`config/dev_graphql.json` is the `dev` configuration plus a `GRAPHQL_URL`
+pointing to the public GraphQLZero API, for trying the GraphQL data source.
 
 ### Precedence and validation
 
@@ -57,6 +64,7 @@ Production adds stricter rules. The prod build refuses to start when:
 - `API_BASE_URL` points to a placeholder or local host (`example.com`,
   `*.example`, `*.invalid`, `*.test`, `localhost`, `127.0.0.1`, `10.0.2.2`);
 - `NETWORK_LOGS` is `true`;
+- `GRAPHQL_URL` (when set) points to a placeholder or local host;
 - `LOG_LEVEL` is `debug`.
 
 When validation fails, the app shows a screen listing **every** problem
@@ -88,8 +96,9 @@ dev-only configuration if you need it.
 1. Add the key to `ConfigKeys` and parse/validate it in
    `AppConfig.fromMap` (`packages/core/lib/src/config/app_config.dart`), with
    tests in `packages/core/test/app_config_test.dart`.
-2. Add a `String.fromEnvironment` line in `config_reader.dart`.
-3. Add the key to every `config/*.json` and to the table above.
+2. Add a `String.fromEnvironment` line in `config_reader.dart`
+   (`packages/app_foundation`).
+3. Add the key to every `config/*.json` of every app and to the table above.
 
 ## Secrets
 
@@ -112,7 +121,7 @@ pattern was removed because it compiled secrets into the binary.
 ## Identifiers and display names
 
 Rename everything at once with the rename tool (commit or stash first so you
-can review the diff):
+can review the diff). Pass `--app-dir apps/app_bloc` for the Bloc app:
 
 ```sh
 dart run tool/rename_app.dart --android-id com.acme.shop --ios-id com.acme.shop --name "Acme Shop" --dry-run
@@ -182,8 +191,10 @@ Crash reporting, analytics, push notifications and payments are not included.
 Integration points:
 
 - **Crash reporting**: implement `ErrorReporter`
-  (`apps/app/lib/app/error/error_reporter.dart`) and pass it to `bootstrap`.
-- **Analytics**: add a provider in `app/di/providers.dart` and call it from
-  controllers, not widgets.
+  (`packages/app_foundation/lib/src/error/error_reporter.dart`) and pass it
+  to `bootstrap(errorReporter: ...)` in the app.
+- **Analytics**: add it to `AppServices`, expose it through the app's DI
+  (a provider or `RepositoryProvider`) and call it from controllers/blocs,
+  not widgets.
 - **Firebase**: run `flutterfire configure` per flavor and keep generated
   options files per environment.

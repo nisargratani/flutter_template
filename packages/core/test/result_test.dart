@@ -38,7 +38,9 @@ void main() {
       expect(const TimeoutFailure('x').isTransient, isTrue);
       expect(const ServerFailure('x', statusCode: 503).isTransient, isTrue);
       expect(const ServerFailure('x', statusCode: 429).isTransient, isTrue);
-      expect(const ServerFailure('x', statusCode: 404).isTransient, isFalse);
+      expect(const ServerFailure('x', statusCode: 400).isTransient, isFalse);
+      expect(const NotFoundFailure('x').isTransient, isFalse);
+      expect(const GraphQLFailure('x').isTransient, isFalse);
       expect(const UnauthorizedFailure('x').isTransient, isFalse);
       expect(const ParsingFailure('x').isTransient, isFalse);
     });

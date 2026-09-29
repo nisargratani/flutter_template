@@ -4,9 +4,14 @@
 
 | Level | Where | Runs on | What it covers |
 | --- | --- | --- | --- |
-| Unit | `packages/*/test`, `apps/app/test` | `flutter test` (no device) | Config parsing and validation, `Result`/failures, redaction, validators, `ApiClient` + interceptors, storage contracts and migrations, repositories, serialization |
-| Widget | `packages/design_system/test`, `apps/app/test` | `flutter test` (no device) | Components, accessibility guidelines, startup, routing and deep-link validation, theme and language switching, loading/empty/error/success states, forms, dialogs |
-| Integration | `apps/app/integration_test` | device, emulator or simulator | Two end-to-end flows with real storage and a fake HTTP transport |
+| Unit | `packages/*/test`, `apps/*/test` | `flutter test` (no device) | Config parsing and validation, `Result`/failures, redaction, validators, `ApiClient`/`GraphQLClient` + interceptors, storage contracts and migrations, drift DAOs (in-memory SQLite), repositories (REST and GraphQL), serialization, blocs/cubits (`bloc_test`) |
+| Widget | `packages/{design_system,app_foundation,feature_posts}/test`, `apps/*/test` | `flutter test` (no device) | Components, accessibility guidelines, startup, routing and deep-link validation, theme and language switching, loading/empty/error/success states, forms, dialogs, clearing local data |
+| Integration | `apps/*/integration_test` | device, emulator or simulator | End-to-end flows per app with real storage (preferences and on-device SQLite) and a fake HTTP transport |
+
+Totals at the time of writing: 197 unit/widget tests across 10 workspace
+members, and 4 integration tests (2 per app). Database tests run against
+real SQLite in memory (`NativeDatabase.memory()`), which `flutter test`
+provides through the sqlite3 build hook.
 
 No test needs network access, credentials or a live backend.
 
@@ -29,20 +34,23 @@ cd apps/app && flutter test --coverage && genhtml coverage/lcov.info -o coverage
 
 ```sh
 flutter devices                                   # find a device ID
-DEVICE=emulator-5554 melos run test:integration
-# or, from apps/app:
+DEVICE=emulator-5554 melos run test:integration            # every app
+DEVICE=emulator-5554 APP=apps/app_bloc melos run test:integration   # one app
+# or, from an app directory:
 flutter test integration_test --flavor dev --dart-define-from-file=config/dev.json -d <device-id>
 ```
 
-The flows:
+The flows (both apps):
 
-1. Browse posts, open a post, restart offline and see the cached list with
-   the offline notice.
-2. Choose dark theme and Spanish, restart, and find both restored.
+1. Browse posts, open a post, restart offline and see the list served from
+   the SQLite cache with the offline notice; open a cached post offline.
+2. Choose dark theme (and Spanish in the Riverpod app), restart, and find
+   the choices restored.
 
-They override the `ApiClient` with `FakeHttpAdapter` and use the real
-`SharedPreferencesKeyValueStore`. CI runs them on an Android emulator through
-the manual/weekly **Integration tests** workflow, not on every pull request.
+They build `AppServices.fromStores` with a `FakeHttpAdapter`, the real
+`SharedPreferencesKeyValueStore` and an on-device `AppDatabase`. CI runs
+them on an Android emulator through the manual/weekly **Integration tests**
+workflow, not on every pull request.
 
 ## Test doubles
 
@@ -53,11 +61,13 @@ possible:
 | --- | --- |
 | `InMemoryKeyValueStore`, `InMemorySecureStore` | `package:storage/storage.dart` |
 | `FakeHttpAdapter`, `FakeResponse`, `FakeHttpAdapter.offline()` | `package:networking/testing.dart` (tests only) |
-| `FakePostsRepository`, `TestAppHarness` | `apps/app/test/helpers/test_app.dart` |
+| `FakePostsRepository`, `testPost` | `package:feature_posts/testing.dart` (tests only) |
+| `AppDatabase(NativeDatabase.memory())` | `package:database/database.dart` + `package:drift/native.dart` |
+| `TestAppHarness` | `apps/<app>/test/helpers/test_app.dart` |
 
 `FakeHttpAdapter` lets you exercise the real `ApiClient`, interceptors and
-error mapping. `mocktail` is available in the app for cases a fake cannot
-cover.
+error mapping. Add a mocking library (for example `mocktail`) only for cases
+a fake cannot cover.
 
 ### Testing widgets that use providers
 
@@ -72,6 +82,27 @@ expect(find.text('Retry'), findsOneWidget);
 ```
 
 For providers without widgets, use `ProviderContainer.test(overrides: [...])`.
+
+### Testing blocs
+
+Use `bloc_test` (see `apps/app_bloc/test/features/posts/posts_bloc_test.dart`):
+
+```dart
+blocTest<PostsBloc, PostsState>(
+  'failed refresh keeps the old list and exposes the error',
+  build: () => PostsBloc(repository..onFetchPosts = () async => const Err(offline)),
+  seed: () => PostsLoaded(feed),
+  act: (bloc) => bloc.add(const PostsRefreshed()),
+  expect: () => [
+    PostsLoaded(feed, isRefreshing: true),
+    PostsLoaded(feed, refreshError: offline),
+  ],
+);
+```
+
+Bloc always emits the first state even when it equals the initial state, so
+a first load expects `[PostsLoading(), PostsLoaded(...)]`. States implement
+`==` so expectations compare values.
 
 ## Conventions
 

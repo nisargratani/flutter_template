@@ -11,12 +11,13 @@ else is needed.
 | --- | --- | --- |
 | Secrets | No secrets in the repository or the app binary; build configuration contains only public values. The old generated `app_secrets.dart` pattern was removed. | `apps/app/config/`, [environment-configuration.md](environment-configuration.md#secrets) |
 | Token storage | Access tokens only in `SecureStore` (Keychain `first_unlock_this_device`, Android Keystore-backed encryption). | `storage`, `SessionStore` |
+| Database | Holds only non-sensitive cached content; cleared with local data. Not encrypted by default (SQLCipher/SQLite3MultipleCiphers available through the sqlite3 hook). | `packages/database` |
 | Reinstall hygiene | Secrets left in the iOS Keychain by a previous install are deleted on first launch. | `StorageMigrator` |
-| Data clean-up | `LocalDataCleaner.clearAll()` removes secrets, caches and preferences. | `app/session/session_store.dart` |
+| Data clean-up | `LocalDataCleaner.clearAll()` removes secrets, the database and preferences. | `app_foundation` (`session_store.dart`) |
 | Log redaction | `Authorization`, cookies, API keys, passwords, tokens, secrets, OTPs masked in headers, query parameters and JSON bodies. | `Redactor` (`core`) |
 | Network logs | Off by default; configuration validation rejects them (and debug logging) in prod. | `AppConfig` |
 | Transport | HTTPS required outside `dev`; Android cleartext disabled except to local hosts in the `dev` flavor; system CAs only. | `AppConfig`, `network_security_config.xml` |
-| 401 handling | The session is cleared when the API rejects the token. | `apiClientProvider` |
+| 401 handling | The session is cleared when the API rejects the token (HTTP 401, or GraphQL `UNAUTHENTICATED`). | `AppServices.fromStores`, `GraphQLClient` |
 | Retries | Only idempotent methods are retried automatically. | `RetryInterceptor` |
 | Deserialization | Hand-written decoders check every field's type; malformed payloads become `ParsingFailure`, never partially built objects. | `Post.fromJson`, `ApiClient` |
 | Deep links | Path parameters are validated before use; unknown paths show a not-found page. | `AppRoutes.parsePostId`, router |
@@ -48,7 +49,8 @@ decided by the template.
 **Data and logging**
 
 - [ ] Add your API's sensitive field names to `Redactor.sensitiveKeys`.
-- [ ] Nothing personal or secret stored in `KeyValueStore` (it is not encrypted).
+- [ ] Nothing personal or secret stored in `KeyValueStore` or `AppDatabase` (neither is encrypted); enable database encryption if you must store sensitive records.
+- [ ] GraphQL: server error messages are logged, never shown to users; disable introspection and set query depth/complexity limits on the server *(project-specific)*.
 - [ ] `ErrorReporter` implementation (crash reporting) scrubs personal data and URLs with credentials.
 - [ ] Privacy policy, data-safety form (Google Play) and privacy manifest/nutrition labels (App Store) reflect what you collect.
 
@@ -90,6 +92,9 @@ The router accepts any path from a deep link or browser URL. Rules:
 - `LoggingErrorReporter` logs error objects as-is; a `DioException` in an
   uncaught error can include the full request URL.
 - No certificate pinning, jailbreak/root detection, or screenshot protection.
+- Builds download SQLite binaries from GitHub releases through the sqlite3
+  build hook (checksums verified); mirror them with the `url_pattern` hook
+  option if your build environment cannot reach GitHub.
 - Web builds have no Content Security Policy.
 
 Report vulnerabilities as described in [SECURITY.md](../SECURITY.md).

@@ -180,6 +180,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apiLabel => 'API';
 
   @override
+  String get graphQLLabel => 'GraphQL';
+
+  @override
   String get dataSection => 'Data';
 
   @override

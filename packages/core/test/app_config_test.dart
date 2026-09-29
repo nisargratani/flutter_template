@@ -93,6 +93,24 @@ void main() {
       expect(problems.single, contains('https'));
     });
 
+    test('GRAPHQL_URL is optional and validated like API_BASE_URL', () {
+      expect(AppConfig.fromMap(values()).graphQLUrl, isNull);
+      expect(
+        AppConfig.fromMap({
+          ...values(),
+          'GRAPHQL_URL': 'https://gql.acme.dev/graphql',
+        }).graphQLUrl,
+        Uri.parse('https://gql.acme.dev/graphql'),
+      );
+      final problems = problemsOf(
+        () => AppConfig.fromMap({
+          ...values(env: 'prod', url: 'https://api.acme.dev'),
+          'GRAPHQL_URL': 'https://graphql.example.com',
+        }),
+      );
+      expect(problems.single, contains('GRAPHQL_URL'));
+    });
+
     group('production', () {
       test('accepts a real https host', () {
         final config = AppConfig.fromMap(

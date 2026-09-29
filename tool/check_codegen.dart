@@ -1,5 +1,10 @@
 // Regenerates code and fails if the output differs from the files on disk,
-// i.e. someone edited a source (ARB file) without regenerating.
+// i.e. someone edited a source (ARB file, drift table) without regenerating.
+//
+// Generators checked:
+// - `flutter gen-l10n` in every package with an l10n.yaml;
+// - `dart run build_runner build` in every workspace member that has
+//   build_runner as a dev dependency (drift in `packages/database`).
 //
 // Works with or without git and leaves the regenerated files in place, so the
 // fix is simply to commit them.
@@ -7,54 +12,78 @@
 // Usage: dart run tool/check_codegen.dart   (or: melos run codegen:check)
 import 'dart:io';
 
-/// Packages that use `flutter gen-l10n` (identified by an l10n.yaml file).
-Iterable<Directory> _l10nPackages() =>
-    Directory('packages')
-        .listSync()
-        .whereType<Directory>()
-        .where((d) => File('${d.path}/l10n.yaml').existsSync());
+Iterable<Directory> _members() => [
+  for (final root in ['apps', 'packages'])
+    if (Directory(root).existsSync())
+      ...Directory(root)
+          .listSync()
+          .whereType<Directory>()
+          .where((d) => File('${d.path}/pubspec.yaml').existsSync()),
+];
 
-Map<String, String> _snapshot(Directory dir) => {
-  if (dir.existsSync())
-    for (final file in dir.listSync(recursive: true).whereType<File>())
-      file.path: file.readAsStringSync(),
-};
+bool _usesBuildRunner(Directory package) => RegExp(
+  r'^\s+build_runner:',
+  multiLine: true,
+).hasMatch(File('${package.path}/pubspec.yaml').readAsStringSync());
+
+/// Contents of the generated files a generator may touch.
+Map<String, String> _snapshot(Directory package, {required bool buildRunner}) {
+  bool generated(String path) => buildRunner
+      ? path.endsWith('.g.dart') || path.contains('/drift_schemas/')
+      : path.contains('/lib/src/generated/');
+  return {
+    for (final file in package.listSync(recursive: true).whereType<File>())
+      if (!file.path.contains('/.dart_tool/') &&
+          !file.path.contains('/build/') &&
+          generated(file.path))
+        file.path: file.readAsStringSync(),
+  };
+}
 
 void main() {
   final stale = <String>[];
-  final packages = _l10nPackages().toList();
-  if (packages.isEmpty) {
-    stderr.writeln('No packages with l10n.yaml found; nothing to check.');
+  var checked = 0;
+
+  for (final package in _members()) {
+    final jobs = <(bool, List<String>)>[
+      if (File('${package.path}/l10n.yaml').existsSync())
+        (false, ['flutter', 'gen-l10n']),
+      if (_usesBuildRunner(package))
+        (true, ['dart', 'run', 'build_runner', 'build']),
+    ];
+    for (final (buildRunner, command) in jobs) {
+      checked++;
+      final before = _snapshot(package, buildRunner: buildRunner);
+      final result = Process.runSync(
+        command.first,
+        command.skip(1).toList(),
+        workingDirectory: package.path,
+        runInShell: Platform.isWindows,
+      );
+      if (result.exitCode != 0) {
+        stderr
+          ..writeln('`${command.join(' ')}` failed in ${package.path}:')
+          ..writeln(result.stdout)
+          ..writeln(result.stderr);
+        exitCode = result.exitCode;
+        return;
+      }
+      final after = _snapshot(package, buildRunner: buildRunner);
+      for (final path in {...before.keys, ...after.keys}) {
+        if (before[path] != after[path]) stale.add(path);
+      }
+      stdout.writeln(
+        'Checked `${command.join(' ')}` in ${package.path} '
+        '(${after.length} generated files)',
+      );
+    }
+  }
+
+  if (checked == 0) {
+    stderr.writeln('No code generators found; nothing to check.');
     exitCode = 1;
     return;
   }
-
-  for (final package in packages) {
-    final generated = Directory('${package.path}/lib/src/generated');
-    final before = _snapshot(generated);
-
-    final result = Process.runSync(
-      'flutter',
-      ['gen-l10n'],
-      workingDirectory: package.path,
-      runInShell: Platform.isWindows,
-    );
-    if (result.exitCode != 0) {
-      stderr
-        ..writeln('flutter gen-l10n failed in ${package.path}:')
-        ..writeln(result.stdout)
-        ..writeln(result.stderr);
-      exitCode = result.exitCode;
-      return;
-    }
-
-    final after = _snapshot(generated);
-    for (final path in {...before.keys, ...after.keys}) {
-      if (before[path] != after[path]) stale.add(path);
-    }
-    stdout.writeln('Checked ${package.path} (${after.length} generated files)');
-  }
-
   if (stale.isEmpty) {
     stdout.writeln('Generated files are up to date.');
     return;

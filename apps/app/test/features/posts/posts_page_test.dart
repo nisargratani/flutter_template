@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:app/features/posts/domain/post.dart';
 import 'package:app/features/posts/presentation/post_detail_page.dart';
 import 'package:core/core.dart';
+import 'package:feature_posts/feature_posts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -90,7 +90,7 @@ void main() {
 
   testWidgets('detail page shows not-found errors', (tester) async {
     harness.postsRepository.onFetchPost = (_) async =>
-        const Err(ServerFailure('missing', statusCode: 404));
+        const Err(NotFoundFailure('missing'));
 
     await harness.pump(tester, initialLocation: '/posts/5');
 

@@ -1,5 +1,5 @@
 import 'package:app/app/router/app_router.dart';
-import 'package:app/features/settings/presentation/settings_controllers.dart';
+import 'package:app/features/settings/presentation/settings_view_model.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:localization/localization.dart';

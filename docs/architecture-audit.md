@@ -225,3 +225,19 @@ serialization code generation), shared_preferences + flutter_secure_storage
    rename script.
 7. CI (PR quality gate, builds) and a manual, protected release workflow.
 8. Security review, documentation, README last, final validation.
+
+## Addendum (2026-09-28): drift, GraphQL and Bloc
+
+After the rebuild, the maintainers asked for three additions:
+
+- **drift**: the audit removed Floor without a database replacement because
+  no feature used one. drift is now included as `packages/database`, and the
+  example feature's offline cache uses it.
+- **Bloc**: the audit removed the unused Bloc module in favour of a single
+  approach. Teams can now choose: `apps/app_bloc` is the same app built with
+  flutter_bloc. Shared code moved into `app_foundation` and `feature_posts`
+  so the two apps differ only in their presentation layer.
+- **GraphQL**: a minimal `GraphQLClient` on the shared HTTP stack, with a
+  GraphQL data source for the posts feature, selected by `GRAPHQL_URL`.
+
+See [architecture.md](architecture.md) for the current design.
