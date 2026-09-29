@@ -3,6 +3,16 @@
 # whose "public" members are only used inside the app.
 include: ../../analysis_options.yaml
 
+analyzer:
+  # This list replaces the root one, so the root patterns are repeated here.
+  exclude:
+    - "**/build/**"
+    - "**/*.g.dart"
+    - "**/generated/**"
+    - android/**
+    - ios/**
+    - web/**
+
 linter:
   rules:
     public_member_api_docs: false
